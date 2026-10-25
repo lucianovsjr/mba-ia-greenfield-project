@@ -90,6 +90,8 @@ those skills.
 
 Before implementing any feature, you MUST use the **context7** MCP tool to look up the relevant library APIs and official documentation.
 
+The context7 server is configured in `.mcp.json` (remote HTTP, `https://mcp.context7.com/mcp`). It works without an API key; export `CONTEXT7_API_KEY` before starting Claude Code for higher rate limits.
+
 Always:
 
 - Check the installed library version in the project manifest
