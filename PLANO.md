@@ -31,13 +31,13 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
   - `npm run test:e2e` → ✅ 52/52.
   - `npx tsc --noEmit` → ✅ exit 0.
   - `npm run lint` → ❌ 150 erros / 40 warnings.
-- [ ] Baseline verde após a T0.4.
+- [x] Baseline verde após a T0.4: `npm test` 144/144 (Jest encerra sozinho), e2e 52/52, `tsc` exit 0, lint 0 erros (23 warnings).
 - **Pronto quando:** as quatro verificações passarem no estado atual (Fases 01–02). Falhas viram task separada (T0.4) — não misturar com a Fase 03.
 
 **Notas do ambiente local** (específicas da máquina de desenvolvimento):
 - Runtime Docker é o Colima (`colima start`).
 - O plugin `docker compose` não está registrado no Docker CLI; usar o binário `docker-compose`.
-- `.env` criado a partir do `.env.example` com `MAIL_FROM` entre aspas (ver T0.4).
+- `.env` criado a partir do `.env.example` (idêntico após a correção da T0.4).
 
 ### T0.3 — Verificar a fundação de IA
 - [x] MCP Postgres conectado e consultando o banco do Compose.
@@ -47,11 +47,12 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - **Pronto quando:** context7 responde a uma consulta e o MCP Postgres consegue consultar o banco do Compose.
 
 ### T0.4 — Corrigir problemas pré-existentes do baseline (`bugfix/baseline-lint-and-tests`)
-- [ ] `src/database/migrations.integration-spec.ts`: o `beforeAll` remove as tabelas mas não o tipo `verification_tokens_type_enum`, então a suíte falha sempre que o banco já está migrado e deixa o banco meio migrado.
-- [ ] Jest (`npm test`) não encerra após imprimir o resumo — investigar o handle aberto.
-- [ ] `npm run lint`: 150 erros (maioria `no-unsafe-*` / `unbound-method` em testes; 6 em `src/channels/channels.service.ts`).
-- [ ] `.env.example`: `MAIL_FROM` sem aspas quebra o parse do Docker Compose (`unexpected character "<"`), contrariando a seção "Environment File Conventions" do `nestjs-project/CLAUDE.md`.
-- [ ] Definition of Done completa (suíte + e2e + tsc + lint) e merge na `dev`.
+- [x] `src/database/migrations.integration-spec.ts`: o `beforeAll` remove as tabelas mas não o tipo `verification_tokens_type_enum`, então a suíte falha sempre que o banco já está migrado e deixa o banco meio migrado. → o `beforeAll` passa a remover também os tipos enum.
+- [x] Jest (`npm test`) não encerra após imprimir o resumo. → causa: o `afterAll` do teste de migration lançava erro antes do `dataSource.destroy()`, deixando o pool do Postgres aberto. Corrigido junto com o item acima (`try/finally`).
+- [x] `npm run lint`: 150 erros. → mocks e respostas tipados (helper do Mailpit, corpo das respostas no e2e, entidades nos specs, erro do Postgres em `channels.service.ts`) e `unbound-method` desligado só para arquivos de teste, conforme a documentação do typescript-eslint.
+- [x] `.env.example`: `MAIL_FROM` sem aspas quebra o parse do Docker Compose (`unexpected character "<"`). → valor entre aspas simples, preservando o valor original.
+- [x] Definition of Done completa (suíte + e2e + tsc + lint).
+- [x] Merge na `dev`.
 - **Pronto quando:** baseline 100% verde na `dev`.
 
 ### T0.5 — Configurar o MCP context7 (`feature/mcp-context7`)
