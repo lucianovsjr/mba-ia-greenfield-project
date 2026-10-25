@@ -41,7 +41,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 
 ### T0.3 — Verificar a fundação de IA
 - [x] MCP Postgres conectado e consultando o banco do Compose.
-- [ ] MCP context7 conectado (não configurado — ver T0.5).
+- [x] MCP context7 conectado (configurado na T0.5).
 - [ ] Ler como referência de formato: `docs/phases/phase-02-auth/` (context, validation, plano, progress) e `docs/decisions/technical-decisions-phase-02-auth.md`.
 - [ ] Ler as rules relevantes em `.claude/rules/` (layer separation, modules, services, controllers, DTOs, entities, typeorm-migrations, typeorm-queries, testing, typescript-strict).
 - **Pronto quando:** context7 responde a uma consulta e o MCP Postgres consegue consultar o banco do Compose.
@@ -56,10 +56,12 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - **Pronto quando:** baseline 100% verde na `dev`.
 
 ### T0.5 — Configurar o MCP context7 (`feature/mcp-context7`)
-- [ ] Adicionar o servidor context7 ao `.mcp.json` versionado (e ao `.mcp.json.example`), consultando a documentação oficial para o comando correto.
-- [ ] Habilitar o servidor no Claude Code e reiniciar a sessão.
-- [ ] Validar com uma consulta real de documentação.
-- [ ] Merge na `dev`.
+- [x] Adicionar o servidor context7 ao `.mcp.json` versionado (e ao `.mcp.json.example`), conforme o README oficial do context7: servidor remoto HTTP `https://mcp.context7.com/mcp`, com a API key opcional via `${CONTEXT7_API_KEY:-}` (nenhum segredo versionado).
+- [x] Documentar a variável opcional `CONTEXT7_API_KEY` no `CLAUDE.md` (seção "Library Documentation Lookup").
+- [x] Habilitar o servidor no Claude Code (`enabledMcpjsonServers` no `.claude/settings.local.json`, local) — `claude mcp list` mostra `context7 ✔ Connected`.
+- [x] Validar com uma consulta real de documentação (`resolve-library-id` respondeu via HTTP).
+- [ ] Reiniciar a sessão do Claude Code para carregar as ferramentas do context7 e confirmar uma consulta pela própria sessão.
+- [x] Merge na `dev`.
 - **Pronto quando:** `claude mcp list` mostra o context7 conectado e uma consulta retorna documentação.
 
 ---
