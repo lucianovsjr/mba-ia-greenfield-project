@@ -196,7 +196,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - Pendências que não bloqueavam os critérios, já fechadas: revisões humanas da T1.2 e da T2.5 e os sub-checks da T3.2 (conferidos contra o `progress.md`).
 
 ### T4.4 — Integração e entrega
-- [ ] Merge de `feature/phase-03-videos` na `dev` (com autorização).
+- [x] Merge de `feature/phase-03-videos` na `dev` (com autorização).
 - [ ] Com a `dev` estável, merge na `main` e push para o fork público.
 
 ---
