@@ -116,22 +116,22 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - **Pronto quando:** veredito `clean`, sem issue aberta.
 
 ### T2.5 — `/plan-build 03`
-- [ ] Gerar `docs/phases/phase-03-videos/phase-03-videos.md` com:
-  - [ ] Step Implementations `SI-03.1`, `SI-03.2`, … (cada uma com arquivos, ações técnicas e seção de Tests).
-  - [ ] Technical Specifications: **Data Model**, **API Contracts**, **Authorization Matrix**, **Error Catalog**, **Events/Messages** (payload do job, produtor, consumidor, retries).
-  - [ ] **Dependency Map** e **Deliverables**.
-- [ ] Revisão crítica do plano — checklist mínimo de cobertura:
-  - [ ] Infra no `compose.yaml`: storage (MinIO + criação de bucket), fila, worker — usando nomes de serviço como host.
-  - [ ] Namespaces de configuração/env para storage, fila e worker.
-  - [ ] Entidade `Video` ligada a `Channel` + migration `<timestamp>-CreateVideos.ts` (id, canal, título, status, chaves de storage do vídeo e thumbnail, duração, metadados, identificador da URL única).
-  - [ ] Início do upload com pré-cadastro como rascunho.
-  - [ ] Conclusão do upload → publicação do job na fila.
-  - [ ] Worker: consumo do job, ffprobe (duração/metadados), FFmpeg (thumbnail), upload do thumbnail, transição de status, tratamento de falha.
-  - [ ] Consulta do vídeo/status, streaming (Range/206) e download.
-  - [ ] Testes nos três níveis (`*.spec.ts`, `*.integration-spec.ts` contra MinIO/fila/Postgres reais, `*.e2e-spec.ts`).
-  - [ ] Documentação OpenAPI dos novos endpoints (padrão do módulo `swagger/`).
-  - [ ] SI final para atualizar o `CLAUDE.md`.
-- [ ] *(Opcional)* `/plan-test-specs 03` se o plano tiver SIs com `**Test Specs:**`.
+- [x] Gerar `docs/phases/phase-03-videos/phase-03-videos.md` com:
+  - [x] Step Implementations `SI-03.1` … `SI-03.12` (cada uma com arquivos, ações técnicas e seção de Tests).
+  - [x] Technical Specifications: **Data Model**, **API Contracts**, **Authorization Matrix**, **Error Catalog**, **Events/Messages** (payload do job, produtor, consumidor, retries).
+  - [x] **Dependency Map** e **Deliverables**.
+- [ ] Revisão crítica do plano (minha) — checklist mínimo de cobertura (pré-conferido pelo agente, falta a revisão humana):
+  - [x] Infra no `compose.yaml`: storage (MinIO + criação de bucket), fila, worker — usando nomes de serviço como host. → SI-03.1 (`minio`, `minio-init`, `redis`) e SI-03.8 (`video-worker`).
+  - [x] Namespaces de configuração/env para storage, fila e worker. → SI-03.1 (`storage`, `queue`, `videos`).
+  - [x] Entidade `Video` ligada a `Channel` + migration `<timestamp>-CreateVideos.ts`. → SI-03.3.
+  - [x] Início do upload com pré-cadastro como rascunho. → SI-03.4.
+  - [x] Conclusão do upload → publicação do job na fila. → SI-03.6.
+  - [x] Worker: consumo do job, ffprobe, FFmpeg, upload do thumbnail, transição de status, tratamento de falha. → SI-03.7 e SI-03.8.
+  - [x] Consulta do vídeo/status, streaming (Range/206) e download. → SI-03.9 e SI-03.10.
+  - [x] Testes nos três níveis. → unit/integration por SI; e2e dos controllers via `/plan-test-specs` + pipeline e2e no SI-03.11.
+  - [x] Documentação OpenAPI dos novos endpoints. → decorators nos SIs de controller + `openapi.json` no SI-03.11.
+  - [x] SI final para atualizar o `CLAUDE.md`. → SI-03.12.
+- [ ] `/plan-test-specs 03` — **necessário** (não opcional): o plano tem 5 SIs de controller com `**Test Specs:** _pending /plan-test-specs_` (SI-03.4, .5, .6, .9, .10), e o `/implement` aborta sem as specs.
 
 ### T2.6 — Fechar o planejamento
 - [ ] Revisar a coerência entre decisões ↔ context ↔ validation ↔ plano (nada no plano sem origem rastreável).
