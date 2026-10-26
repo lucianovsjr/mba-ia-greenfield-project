@@ -112,7 +112,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - Task separada (fora de escopo, não feita): o regex `S_NN` em `.claude/agents/decisions-reader.md` usa lookahead, que o ripgrep não suporta sem PCRE2. O subagente contornou com um padrão equivalente; corrigir a spec do agente numa branch própria.
 
 ### T2.4 — Iterar validate ⇄ resolve até `clean`
-- [ ] Repetir T2.2 → T2.3 até `validation.md` terminar com **`status: clean`**.
+- [x] Repetir T2.2 → T2.3 até `validation.md` terminar com **`status: clean`**. → 2ª rodada do validate: `status: clean`, nenhuma issue nova (AMB-1..3 resolvidas).
 - **Pronto quando:** veredito `clean`, sem issue aberta.
 
 ### T2.5 — `/plan-build 03`
