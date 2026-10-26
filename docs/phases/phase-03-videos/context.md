@@ -3,7 +3,7 @@ kind: phase
 name: phase-03-videos
 sources_mtime:
   docs/project-plan.md: "2026-10-25T19:00:59-03:00"
-  docs/decisions/technical-decisions-phase-03-videos.md: "2026-10-25T21:04:59-03:00"
+  docs/decisions/technical-decisions-phase-03-videos.md: "2026-10-25T21:35:32-03:00"
   docs/decisions/technical-decisions-openapi-docs-nestjs.md: "2026-10-25T19:00:59-03:00"
   docs/decisions/technical-decisions-next-frontend-config-base.md: "2026-10-25T19:00:59-03:00"
   docs/decisions/technical-decisions-next-frontend-msw-foundation.md: "2026-10-25T19:00:59-03:00"
@@ -50,9 +50,9 @@ sources_mtime:
 
 | Ref | Source | Scope | Topic | Status | Decision | Libraries |
 |-----|--------|-------|-------|--------|----------|-----------|
-| phase-03-videos/TD-01 | phase | Backend | Queue Technology for Background Processing | decided | A (BullMQ + Redis via `@nestjs/bullmq@11.x`) | — |
+| phase-03-videos/TD-01 | phase | Backend | Queue Technology for Background Processing | decided | A (BullMQ + Redis via `@nestjs/bullmq@11.x`) | bullmq, @nestjs/bullmq |
 | phase-03-videos/TD-02 | phase | Repo-wide | Local S3-Compatible Storage Server Image | decided | A (`pgsty/minio` pinned RELEASE tag + `pgsty/mc` bootstrap) | — |
-| phase-03-videos/TD-03 | phase | Backend | S3 Client Library and Endpoint Strategy | decided | A (AWS SDK v3, internal endpoint for ops + public endpoint for presigning) | — |
+| phase-03-videos/TD-03 | phase | Backend | S3 Client Library and Endpoint Strategy | decided | A (AWS SDK v3, internal endpoint for ops + public endpoint for presigning) | @aws-sdk/client-s3, @aws-sdk/s3-request-presigner |
 | phase-03-videos/TD-04 | phase | Backend | Bucket and Object Key Layout | decided | A (Single private bucket, keys grouped by video id) | — |
 | phase-03-videos/TD-05 | phase | Cross-layer | Upload Protocol for Files up to 10GB | decided | C (Presigned multipart upload orchestrated by the API) | — |
 | phase-03-videos/TD-06 | phase | Cross-layer | Upload Completion and Processing Trigger | decided | A (Client calls API "complete" endpoint; API completes and enqueues) | — |
@@ -66,6 +66,7 @@ sources_mtime:
 | phase-03-videos/TD-14 | phase | Backend | Video Status Lifecycle | decided | A (`draft → processing → ready \| failed`) | — |
 | phase-03-videos/TD-15 | phase | Backend | Processing Failure, Retries and Idempotency | decided | A (Queue-native retries w/ exponential backoff; unrecoverable for invalid media; `failed` after final attempt) | — |
 | phase-03-videos/TD-16 | phase | Backend | Upload Limits, URL Expiration and Abandoned Uploads | decided | A (Validate at initiate and complete + storage-native cleanup) | — |
+|     └─ Last revision: 2026-10-25 — Accepted formats fixed as an allowlist checked at initiate: `.mp4` (`video/mp4`)… | | | | | | |
 | phase-03-videos/TD-17 | phase | Backend | Access Rules for Upload, Status, Streaming and Download | decided | A (Owner-only in Phase 03, 404 for non-owners) | — |
 
 _Source files:_
@@ -91,7 +92,7 @@ _Source files:_
 ### phase-03-videos/TD-01
 
 **Recommendation:** It is the only option with a first-party NestJS 11 integration *and* native job semantics this phase needs (attempts, exponential backoff, `jobId` dedup, unrecoverable errors), all in CJS-compatible packages that work with the project's Jest setup. The cost is one extra Compose service and the non-atomic enqueue, which TD-06/TD-15 handle by making the status transition and the job idempotent. pg-boss (B) would avoid new infra, but its ESM-only current major and lack of a NestJS module add more risk than Redis adds cost.
-**Libraries:** —
+**Libraries:** bullmq, @nestjs/bullmq
 
 ### phase-03-videos/TD-02
 
@@ -101,7 +102,7 @@ _Source files:_
 ### phase-03-videos/TD-03
 
 **Recommendation:** It is the only option that supports per-part presigning for multipart (required by TD-05), runs on NestJS 11, and points unchanged at AWS S3 in production. Endpoint strategy: use **two client configurations from one `storage` config namespace**. The internal client (`S3_ENDPOINT=http://minio:9000`, the Compose service name per `CLAUDE.md`) runs server-side operations. A presign-only client (`S3_PUBLIC_ENDPOINT`, the address reachable by the HTTP client) signs every URL handed to callers outside the Docker network. The worker presigns with the internal endpoint (TD-09). The `S3_PUBLIC_ENDPOINT` is the only storage host that is not the service name, because it is consumed outside Docker.
-**Libraries:** —
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner
 
 ### phase-03-videos/TD-04
 
@@ -167,6 +168,10 @@ _Source files:_
 
 **Recommendation:** It enforces the 10GB requirement robustly without placing the API in the data path, and reclaims abandoned bytes with zero application code. The sweeper (B) solves a row-cleanup problem no Phase 03 capability asks for.
 **Libraries:** —
+
+**Revisions:**
+- 2026-10-25 — Initiate payload fixed: the client sends `title` (required), `filename`, `size` and `contentType`; the draft row is created with the title, and title editing remains a Phase 04 capability. Rationale: pre-registration payload clarified (resolves phase-03-videos validation AMB-1).
+- 2026-10-25 — Accepted formats fixed as an allowlist checked at initiate: `.mp4` (`video/mp4`), `.mov` (`video/quicktime`), `.mpg` / `.mpeg` (`video/mpeg`), `.avi` (`video/x-msvideo`); a file whose extension or declared MIME type is outside the list is rejected. ffprobe in the worker remains the definitive content check (invalid media → `failed`, per TD-15). Rationale: acceptance policy tightened (resolves phase-03-videos validation AMB-2).
 
 ### phase-03-videos/TD-17
 
@@ -372,7 +377,9 @@ _Source files:_
 
 ## Non-UI / Deferred Capabilities
 
-_None._
+| Capability | Status | Rationale | TD refs |
+|-----------|--------|-----------|---------|
+| `next-frontend/` — video interface (upload, playback, download screens) | deferred | Phase 03 affects `nestjs-project/` only (API, worker, Compose infra, migration, tests); the video interface is out of scope for this phase (resolves validation AMB-3). Cross-layer contracts are prepared for a future frontend phase. | phase-03-videos/TD-05, phase-03-videos/TD-06, phase-03-videos/TD-12, phase-03-videos/TD-13 |
 
 ## Testing Requirements
 

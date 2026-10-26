@@ -58,6 +58,7 @@ _Research notes (facts verified on 2026-10-25 that constrain the options below):
 **Recommendation:** **Option A (BullMQ + Redis via `@nestjs/bullmq@11.x`)** — It is the only option with a first-party NestJS 11 integration *and* native job semantics this phase needs (attempts, exponential backoff, `jobId` dedup, unrecoverable errors), all in CJS-compatible packages that work with the project's Jest setup. The cost is one extra Compose service and the non-atomic enqueue, which TD-06/TD-15 handle by making the status transition and the job idempotent. pg-boss (B) would avoid new infra, but its ESM-only current major and lack of a NestJS module add more risk than Redis adds cost.
 
 **Decision:** A (BullMQ + Redis via `@nestjs/bullmq@11.x`)
+**Libraries:** bullmq, @nestjs/bullmq
 
 ---
 
@@ -125,6 +126,7 @@ _Research notes (facts verified on 2026-10-25 that constrain the options below):
 **Recommendation:** **Option A (AWS SDK v3)** — It is the only option that supports per-part presigning for multipart (required by TD-05), runs on NestJS 11, and points unchanged at AWS S3 in production. Endpoint strategy: use **two client configurations from one `storage` config namespace**. The internal client (`S3_ENDPOINT=http://minio:9000`, the Compose service name per `CLAUDE.md`) runs server-side operations. A presign-only client (`S3_PUBLIC_ENDPOINT`, the address reachable by the HTTP client) signs every URL handed to callers outside the Docker network. The worker presigns with the internal endpoint (TD-09). The `S3_PUBLIC_ENDPOINT` is the only storage host that is not the service name, because it is consumed outside Docker.
 
 **Decision:** A (AWS SDK v3 — internal endpoint for operations + public endpoint for presigning)
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner
 
 ---
 
@@ -528,6 +530,10 @@ _Research notes (facts verified on 2026-10-25 that constrain the options below):
 **Recommendation:** **Option A (declared-size validation at initiate + real-size verification at complete + storage-native cleanup of incomplete multipart uploads)** — It enforces the 10GB requirement robustly without placing the API in the data path, and reclaims abandoned bytes with zero application code. The sweeper (B) solves a row-cleanup problem no Phase 03 capability asks for.
 
 **Decision:** A (Validate at initiate and at complete + storage-native cleanup)
+
+**Revisions:**
+- 2026-10-25 — Initiate payload fixed: the client sends `title` (required), `filename`, `size` and `contentType`; the draft row is created with the title, and title editing remains a Phase 04 capability. Rationale: pre-registration payload clarified (resolves phase-03-videos validation AMB-1).
+- 2026-10-25 — Accepted formats fixed as an allowlist checked at initiate: `.mp4` (`video/mp4`), `.mov` (`video/quicktime`), `.mpg` / `.mpeg` (`video/mpeg`), `.avi` (`video/x-msvideo`); a file whose extension or declared MIME type is outside the list is rejected. ffprobe in the worker remains the definitive content check (invalid media → `failed`, per TD-15). Rationale: acceptance policy tightened (resolves phase-03-videos validation AMB-2).
 
 ---
 
