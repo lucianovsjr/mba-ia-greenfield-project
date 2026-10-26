@@ -79,6 +79,56 @@ describe('Swagger endpoints (e2e)', () => {
       });
     });
 
+    it('GET /api/docs-json documents the 9 /videos operations with ApiErrorEnvelope errors', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/docs-json')
+        .expect(200);
+      type Operation = {
+        tags: string[];
+        responses: Record<string, { content?: unknown }>;
+      };
+      const paths = (
+        res.body as { paths: Record<string, Record<string, Operation>> }
+      ).paths;
+
+      const videoOperations = Object.entries(paths)
+        .filter(([path]) => path.startsWith('/videos'))
+        .flatMap(([path, methods]) =>
+          Object.entries(methods).map(([method, operation]) => ({
+            key: `${method.toUpperCase()} ${path}`,
+            operation,
+          })),
+        );
+
+      expect(videoOperations.map(({ key }) => key).sort()).toEqual(
+        [
+          'POST /videos',
+          'GET /videos/{publicId}',
+          'GET /videos/{publicId}/stream',
+          'GET /videos/{publicId}/download',
+          'GET /videos/{publicId}/thumbnail',
+          'POST /videos/{publicId}/upload/part-urls',
+          'GET /videos/{publicId}/upload/parts',
+          'POST /videos/{publicId}/upload/complete',
+          'DELETE /videos/{publicId}/upload',
+        ].sort(),
+      );
+      for (const { operation } of videoOperations) {
+        expect(operation.tags).toEqual(['videos']);
+        const errorResponses = Object.entries(operation.responses).filter(
+          ([status]) => Number(status) >= 400,
+        );
+        expect(errorResponses.length).toBeGreaterThan(0);
+        for (const [, response] of errorResponses) {
+          expect(response.content).toEqual({
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ApiErrorEnvelope' },
+            },
+          });
+        }
+      }
+    });
+
     it('GET /api/docs-yaml returns 200 with YAML content', async () => {
       const res = await request(app.getHttpServer())
         .get('/api/docs-yaml')

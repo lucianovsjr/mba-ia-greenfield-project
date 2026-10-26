@@ -118,3 +118,99 @@ Content-Type: {{contentType}}
   "token": "{{resetToken}}",
   "new_password": "new-password123"
 }
+
+
+###
+# ─────────────────────────────────────────────
+# VÍDEOS — upload direto ao storage, processamento e reprodução
+# Requer login (passo 4). Os bytes do arquivo vão direto ao MinIO pelas
+# URLs pré-assinadas; a API só recebe metadados.
+# ─────────────────────────────────────────────
+
+# Arquivo local enviado no passo 12 (caminho relativo a este arquivo) e o seu
+# tamanho exato em bytes (`stat -f%z sample.mp4` no macOS, `stat -c%s` no Linux).
+# Com o tamanho de parte padrão (100 MiB) um arquivo menor cabe em uma parte só.
+@videoFile = ./sample.mp4
+@videoSize = 1048576
+
+# Capturados das respostas abaixo
+@publicId = {{initiateVideo.response.body.$.video.public_id}}
+@partUrl = {{partUrls.response.body.$.urls[0].url}}
+@partEtag = {{uploadPart.response.headers.ETag}}
+
+
+### 10. Iniciar o upload — cria o vídeo como rascunho e abre o multipart upload
+# @name initiateVideo
+POST {{baseUrl}}/videos
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Meu primeiro vídeo",
+  "filename": "sample.mp4",
+  "size": {{videoSize}},
+  "contentType": "video/mp4"
+}
+
+
+### 11. URLs pré-assinadas das partes (até 100 por requisição)
+# @name partUrls
+POST {{baseUrl}}/videos/{{publicId}}/upload/part-urls
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "part_numbers": [1]
+}
+
+
+### 12. Enviar a parte 1 direto ao storage (sem passar pela API) — ETag capturado
+# @name uploadPart
+PUT {{partUrl}}
+
+< {{videoFile}}
+
+
+### 13. Partes já enviadas (retomada do upload)
+GET {{baseUrl}}/videos/{{publicId}}/upload/parts
+Authorization: Bearer {{accessToken}}
+
+
+### 14. Concluir o upload — publica o job de processamento (status → processing)
+POST {{baseUrl}}/videos/{{publicId}}/upload/complete
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "parts": [
+    { "part_number": 1, "etag": {{partEtag}} }
+  ]
+}
+
+
+### 15. Consultar o vídeo — repetir até status "ready" (ou "failed")
+GET {{baseUrl}}/videos/{{publicId}}
+Authorization: Bearer {{accessToken}}
+
+
+### 16. Streaming — 302 para a URL pré-assinada (que atende Range com 206)
+# @no-redirect
+GET {{baseUrl}}/videos/{{publicId}}/stream
+Authorization: Bearer {{accessToken}}
+
+
+### 17. Download — 302 para a URL pré-assinada com Content-Disposition: attachment
+# @no-redirect
+GET {{baseUrl}}/videos/{{publicId}}/download
+Authorization: Bearer {{accessToken}}
+
+
+### 18. Thumbnail — 302 para a URL pré-assinada da imagem JPEG
+# @no-redirect
+GET {{baseUrl}}/videos/{{publicId}}/thumbnail
+Authorization: Bearer {{accessToken}}
+
+
+### 19. Cancelar o upload — só enquanto o vídeo é rascunho (antes do passo 14)
+DELETE {{baseUrl}}/videos/{{publicId}}/upload
+Authorization: Bearer {{accessToken}}
