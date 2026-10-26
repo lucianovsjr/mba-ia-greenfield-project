@@ -197,7 +197,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 
 ### T4.4 — Integração e entrega
 - [x] Merge de `feature/phase-03-videos` na `dev` (com autorização).
-- [ ] Com a `dev` estável, merge na `main` e push para o fork público.
+- [x] Com a `dev` estável, merge na `main` e push para o fork público. → DoD reexecutada na `dev` após o merge: `npm test` 265/265 (40 suítes), e2e 82/82 (9 suítes), `tsc` exit 0, lint 0 erros (23 warnings pré-existentes).
 
 ---
 
