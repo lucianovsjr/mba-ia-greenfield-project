@@ -10,6 +10,7 @@ import queueConfig from '../config/queue.config';
       inject: [queueConfig.KEY],
       useFactory: (config: ConfigType<typeof queueConfig>) => ({
         connection: { host: config.redisHost, port: config.redisPort },
+        prefix: config.prefix,
       }),
     }),
   ],

@@ -40,18 +40,15 @@ describe('Database migrations (integration)', () => {
 
     await dataSource.initialize();
 
-    await Promise.all([
-      ...MANAGED_TABLES.map((table) =>
-        dataSource.query(`DROP TABLE IF EXISTS "${table}" CASCADE`),
-      ),
-      dataSource.query(`DROP TABLE IF EXISTS "migrations" CASCADE`),
-    ]);
+    // A single statement: parallel DROP ... CASCADE on FK-linked tables
+    // (videos → channels) deadlock against each other.
+    const tables = [...MANAGED_TABLES, 'migrations']
+      .map((table) => `"${table}"`)
+      .join(', ');
+    await dataSource.query(`DROP TABLE IF EXISTS ${tables} CASCADE`);
     // Enum types outlive their tables; drop them so the migrations can recreate them.
-    await Promise.all(
-      MANAGED_ENUM_TYPES.map((type) =>
-        dataSource.query(`DROP TYPE IF EXISTS "${type}"`),
-      ),
-    );
+    const types = MANAGED_ENUM_TYPES.map((type) => `"${type}"`).join(', ');
+    await dataSource.query(`DROP TYPE IF EXISTS ${types}`);
   });
 
   afterAll(async () => {

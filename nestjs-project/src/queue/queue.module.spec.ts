@@ -6,7 +6,7 @@ import queueConfig from '../config/queue.config';
 import { QueueModule } from './queue.module';
 
 describe('QueueModule', () => {
-  it('should compile and connect queues to the configured Redis', async () => {
+  it('should compile and connect queues to the configured Redis and prefix', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ isGlobal: true, load: [queueConfig] }),
@@ -21,6 +21,7 @@ describe('QueueModule', () => {
       host: config.redisHost,
       port: config.redisPort,
     });
+    expect(queue.opts.prefix).toBe(config.prefix);
 
     await moduleRef.close();
   });

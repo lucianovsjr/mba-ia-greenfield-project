@@ -14,3 +14,16 @@ export const PROCESS_VIDEO_JOB_OPTIONS = {
 export interface ProcessVideoJobData {
   videoId: string;
 }
+
+export const VIDEO_FAILURE_REASONS = {
+  invalidMedia: 'INVALID_MEDIA',
+  processingFailed: 'PROCESSING_FAILED',
+} as const;
+
+export type VideoFailureReason =
+  (typeof VIDEO_FAILURE_REASONS)[keyof typeof VIDEO_FAILURE_REASONS];
+
+// Long enough for ffprobe + ffmpeg (FFPROBE_TIMEOUT_MS + FFMPEG_TIMEOUT_MS).
+export const SOURCE_URL_TTL_SECONDS = 900;
+
+export const THUMBNAIL_CONTENT_TYPE = 'image/jpeg' as const;

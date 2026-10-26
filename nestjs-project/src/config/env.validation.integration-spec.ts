@@ -75,6 +75,7 @@ describe('envValidationSchema — storage, queue and videos', () => {
       S3_BUCKET: 'streamtube-videos',
       REDIS_HOST: 'redis',
       REDIS_PORT: 6379,
+      QUEUE_PREFIX: 'bull',
       VIDEO_MAX_SIZE_BYTES: 10737418240,
       UPLOAD_PART_SIZE_BYTES: 104857600,
       UPLOAD_PART_URL_TTL_SECONDS: 3600,
