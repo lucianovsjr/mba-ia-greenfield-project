@@ -98,8 +98,8 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 ## Etapa 2 — Planejamento (pipeline)
 
 ### T2.1 — `/plan-context 03`
-- [ ] Gerar `docs/phases/phase-03-videos/context.md` (consolida project-plan, decisões, convenções das fases anteriores e testing guide).
-- [ ] Revisar: capability coverage completo (todos os bullets da Fase 03 mapeados), convenções herdadas da Fase 02 presentes.
+- [x] Gerar `docs/phases/phase-03-videos/context.md` (consolida project-plan, decisões, convenções das fases anteriores e testing guide).
+- [x] Revisar: capability coverage completo (todos os bullets da Fase 03 mapeados), convenções herdadas da Fase 02 presentes. → 9/9 capabilities cobertas; docs ad-hoc herdados: `openapi-docs-nestjs`, `next-frontend-config-base`, `next-frontend-msw-foundation`.
 
 ### T2.2 — `/plan-validate 03`
 - [ ] Gerar `docs/phases/phase-03-videos/validation.md`.
