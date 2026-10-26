@@ -160,13 +160,17 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
   - [ ] Cosmético: em `videos.service.ts`, o comentário sobre descartar o upload concluído está acima de `getVideo`, mas descreve `discardUpload` (SI-03.10).
 
 ### T3.3 — Validação funcional ponta a ponta (manual, além dos testes)
-- [ ] `docker compose up -d` sobe API, Postgres, Mailpit, storage, fila e worker sem erros.
-- [ ] Iniciar um upload → vídeo criado como rascunho no banco (conferir via MCP Postgres).
-- [ ] Concluir o upload direto ao storage → job publicado → worker processa → status `pronto`, duração/metadados preenchidos, thumbnail no bucket.
-- [ ] Vídeo inválido/corrompido → status de erro.
-- [ ] Streaming responde `206 Partial Content` com header `Range`; download funciona.
-- [ ] Validar o upload grande: arquivo de vários GB enviado sem passar pela API (a API continua respondendo durante o envio). Limite de 10GB aplicado conforme o plano.
-- [x] Atualizar `nestjs-project/api.http` com os novos endpoints, se for o padrão adotado no plano. → feito no SI-03.11 (passos 10–19); falta executá-lo contra o Compose.
+- [x] `docker compose up -d` sobe API, Postgres, Mailpit, storage, fila e worker sem erros. → `minio-init` `Exited (0)`, Redis `PONG`, MinIO saudável; a API sobe com `start:dev` (o container `nestjs-api` fica ocioso por padrão).
+- [x] Iniciar um upload → vídeo criado como rascunho no banco (conferir via MCP Postgres). → `draft`, ligado ao canal do usuário, `upload_id` preenchido. Cancelar (`DELETE /upload`) → 204 e o vídeo some (404).
+- [x] Concluir o upload direto ao storage → job publicado → worker processa → status `pronto`, duração/metadados preenchidos, thumbnail no bucket. → MP4 de 12s: `processing` → `ready` em ~2s; `videos/{id}/source` e `thumbnail.jpg` (JPEG 1280x720) no bucket; antes do `ready` o stream responde 409 `VIDEO_NOT_READY`.
+- [x] Vídeo inválido/corrompido → status de erro. → 2MB aleatórios como `.mp4`: `failed` / `INVALID_MEDIA` em 1 tentativa (sem retry). `.txt` → 415 `UNSUPPORTED_VIDEO_FORMAT`.
+- [x] Streaming responde `206 Partial Content` com header `Range`; download funciona. → 302 para a URL pré-assinada; `Range` → 206 com `Content-Range` correto (inclusive no offset 3GB do vídeo grande); download com `Content-Disposition: attachment` e conteúdo idêntico ao original; sem token → 401; outro usuário → 404.
+- [x] Validar o upload grande: arquivo de vários GB enviado sem passar pela API (a API continua respondendo durante o envio). Limite de 10GB aplicado conforme o plano. → AVI de 2,9GB em 30 partes direto ao MinIO; a API ficou em ≤5% de CPU e ~487MiB estáveis, e `GET /` respondeu em ~10ms durante o envio; `ready` em <10s. Retomada testada (10 partes enviadas, `GET /upload/parts`, demais 20 em um lote). 10GB exatos → aceito (103 partes); 10GB + 1 byte → 413 `VIDEO_TOO_LARGE`.
+- [x] Atualizar `nestjs-project/api.http` com os novos endpoints, se for o padrão adotado no plano. → feito no SI-03.11 (passos 10–19). Os mesmos passos foram executados contra o Compose por script (curl), não pela extensão REST Client.
+- Tasks separadas que surgiram na validação (fora de escopo, não feitas):
+  - [ ] **Bug da Fase 02:** o `ThrottlerGuard` é registrado como `APP_GUARD` no `AuthModule` (`src/auth/auth.module.ts`), mas no NestJS `APP_GUARD` vale para a aplicação inteira, em qualquer módulo → todos os endpoints de `/videos` ficam limitados a 10 req/min por IP (o upload por script recebeu 429 ao pedir uma URL por parte). Isso contraria a decisão de limitar só o Auth. O `test/helpers/e2e-app.ts` limpa o throttler, então os e2e não detectam. → branch `bugfix/*`.
+  - [ ] O bucket de dev (`streamtube-videos`) acumula objetos `source` de 5MiB e dezenas de multipart uploads incompletos de horas antes da validação, aparentemente das suítes de teste, que usam o mesmo bucket e não limpam → avaliar bucket próprio para testes e/ou limpeza no `afterAll`.
+  - [ ] O `api.http` (passo 12) envia `./sample.mp4`, que não existe no repositório e não tem instrução de como obter → documentar como gerar (por exemplo, com o `ffmpeg` do container do worker).
 
 ---
 
