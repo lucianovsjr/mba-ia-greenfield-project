@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** completed
-**SIs:** 11/12 completed
+**SIs:** 12/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
