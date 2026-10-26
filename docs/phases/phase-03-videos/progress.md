@@ -1,6 +1,6 @@
 # phase-03-videos — Progress
 
-**Status:** in_progress
+**Status:** completed
 **SIs:** 11/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
@@ -109,6 +109,8 @@
   - `api.http`: passos 10–19 (initiate → part-urls → `PUT` direto ao storage com o arquivo local `@videoFile` → parts → complete → get → stream/download/thumbnail com `@no-redirect` → abort), capturando `public_id`, URL da parte e `ETag` por response variables. A execução manual contra o Compose fica para a T3.3 (exige API e `video-worker` rodando).
 
 ### SI-03.12 — Atualizar a documentação de IA (CLAUDE.md e diagrama de arquitetura)
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** no tests (documentation only); ACs verificados por grep — nenhum "TBD" no `CLAUDE.md` da raiz nem no diagrama, os 9 endpoints de `/videos` conferidos contra `videos.controller.ts`, os 4 serviços contra o `compose.yaml`, os scripts `start:worker*` contra o `package.json`, as env vars contra o `.env.example` e todos os caminhos citados existem
+- **Observations:**
+  - `nestjs-project/CLAUDE.md` também ganhou as verificações de prontidão do Redis, MinIO e `minio-init` em "Environment Startup Verification" e a nota sobre o `src/test/setup-env.ts` (`QUEUE_PREFIX=test`) em "Jest Configuration" — ambos são comportamento do código desta fase que afeta como o agente sobe o ambiente e roda os testes.
+  - O conflito de `dist/` entre `start:dev` e `start:worker:dev` (task separada registrada no SI-03.8) ficou documentado como aviso no `nestjs-project/CLAUDE.md`, sem correção.

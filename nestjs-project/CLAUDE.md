@@ -2,7 +2,7 @@
 
 ## Environment Startup Verification
 
-**Default behavior:** starting the environment means starting **only infrastructure services** (database, mail, etc.) — **never** start the NestJS application server unless the user explicitly asks to run/serve the project (e.g., "rode o projeto", "suba o servidor", "run the app").
+**Default behavior:** starting the environment means starting **only infrastructure services** (database, mail, storage, queue, etc.) — **never** start the NestJS application server unless the user explicitly asks to run/serve the project (e.g., "rode o projeto", "suba o servidor", "run the app").
 
 After starting infrastructure, always confirm the containers are up before proceeding:
 
@@ -13,6 +13,11 @@ docker compose ps   # all services must show status "running"
 Then verify each infrastructure service is actually ready to accept connections — not just running:
 
 - **PostgreSQL:** `docker compose exec db pg_isready -U streamtube` — expect `accepting connections`
+- **Redis:** `docker compose exec redis redis-cli ping` — expect `PONG`
+- **MinIO:** `curl -fs http://localhost:9000/minio/health/live` — expect exit code 0
+- **Bucket:** `docker compose ps -a minio-init` — expect `Exited (0)` (one-shot job that creates the `S3_BUCKET` bucket; it is not a long-running service)
+
+`docker compose up -d` also starts `video-worker`, which runs the worker in watch mode — see "Videos" below.
 
 Only start the NestJS dev server (`npm run start:dev`) when the user **explicitly** asks to run the application — never as part of "start the environment".
 
@@ -33,7 +38,12 @@ docker compose exec nestjs-api npm run start:dev
 
 Services:
 - `nestjs-api` — NestJS API, port `3000`
+- `video-worker` — video processing worker (same image and code as `nestjs-api`, runs `npm run start:worker:dev`)
 - `db` — PostgreSQL 17, port `5432`, database `streamtube`, user/password `streamtube`
+- `mailpit` — SMTP `1025`, web UI `8025`
+- `minio` — S3-compatible object storage (`pgsty/minio`), API `9000`, console `9001`, credentials `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD`
+- `minio-init` — one-shot `mc` job that creates the `S3_BUCKET` bucket, then exits
+- `redis` — Redis 8, port `6379`, backend of the BullMQ queue
 
 All verification and teardown commands run on the **host machine**:
 
@@ -44,8 +54,13 @@ curl http://localhost:3000
 # Verify PostgreSQL is ready (runs inside the db container)
 docker compose exec db pg_isready -U streamtube
 
+# Verify Redis and MinIO
+docker compose exec redis redis-cli ping
+curl -fs http://localhost:9000/minio/health/live
+
 # Check container logs
 docker compose logs nestjs-api
+docker compose logs video-worker
 docker compose logs db
 
 # Tear down the entire environment
@@ -62,6 +77,10 @@ docker compose down
 npm run start:dev                        # Dev server with hot-reload
 npm run build                            # Compile to dist/
 npm run start:prod                       # Run compiled build
+npm run start:worker                     # Video worker (src/worker.ts)
+npm run start:worker:dev                 # Video worker with hot-reload (what video-worker runs)
+npm run start:worker:prod                # Run compiled worker (dist/worker.js)
+npm run openapi:export                   # Regenerate openapi.json
 
 npm test                                 # Unit tests
 npm run test:watch                       # Unit tests in watch mode
@@ -99,7 +118,7 @@ During active development, run only the tests related to the file being changed 
 
 Commands that never exit (dev server, watch modes) must be run in background in the Bash tool — otherwise the agent blocks indefinitely waiting for the process to return.
 
-This applies to: `start:dev`, `start:prod`, `test:watch`, and any other persistent process.
+This applies to: `start:dev`, `start:prod`, `start:worker*`, `test:watch`, and any other persistent process.
 
 ## Test Type Selection
 
@@ -120,6 +139,7 @@ Conventions for **how to write** each kind of test (mocking patterns, AAA struct
 These settings are required in `package.json` (jest config) and `test/jest-e2e.json` for the project's tests to work correctly:
 
 - `setupFiles: ["dotenv/config"]` — without this, `.env` is not loaded inside the Jest process. `DB_HOST`, `JWT_SECRET`, etc. fall back to undefined or to the host's `localhost`, breaking container-to-container DNS.
+- `setupFiles` also loads `src/test/setup-env.ts` (after `dotenv/config`), which forces `QUEUE_PREFIX=test` so the running `video-worker` (prefix `bull`) never consumes jobs published by tests.
 - `testRegex: '.*\\.(spec|integration-spec)\\.ts$'` — covers both unit (`*.spec.ts`) and integration (`*.integration-spec.ts`) suffixes.
 
 Do not add new test-file suffixes; if a new test type is needed, update the regex deliberately.
@@ -148,6 +168,47 @@ NestJS with standard module structure. Source lives in `src/`, compiled output i
 
 - Each domain feature gets its own module (e.g., `UsersModule`, `VideosModule`) registered in `AppModule`
 - Controllers handle HTTP routing; Services hold business logic; both are scoped to their module
+- Two entrypoints share the code: `src/main.ts` (HTTP API, `AppModule`) and `src/worker.ts` (standalone application context, `WorkerModule`, no HTTP server)
+
+## Videos (upload and processing)
+
+Modules:
+
+- `src/storage/` — `StorageModule`: S3 SDK wrapper (`StorageService`) with two clients — one on `S3_ENDPOINT` for server-side calls and one on `S3_PUBLIC_ENDPOINT` for presigning URLs used by HTTP clients
+- `src/queue/` — `QueueModule`: BullMQ connection to Redis (`REDIS_HOST`/`REDIS_PORT`, key prefix `QUEUE_PREFIX`)
+- `src/media/` — `MediaModule`: `ffprobe` (`MediaProbeService`) and `ffmpeg` (`ThumbnailService`) wrappers over `child_process` (binaries installed in `Dockerfile.dev`)
+- `src/videos/` — `VideosModule`: `Video` entity (linked to `Channel`), controller, service, and `processing/` (job producer, processor, `VideoProcessingService`)
+- `src/worker.ts` + `src/worker.module.ts` — worker entrypoint; registers the `video-processing` queue processor
+
+Endpoints — all require authentication and are **owner-only** (non-owners get `404 VIDEO_NOT_FOUND`):
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/videos` | Create the draft video and start the S3 multipart upload |
+| `POST` | `/videos/:publicId/upload/part-urls` | Presigned `PUT` URLs for upload parts |
+| `GET` | `/videos/:publicId/upload/parts` | List uploaded parts (resume an upload) |
+| `POST` | `/videos/:publicId/upload/complete` | Complete the multipart upload and enqueue processing |
+| `DELETE` | `/videos/:publicId/upload` | Abort the upload and delete the draft |
+| `GET` | `/videos/:publicId` | Video data and processing status |
+| `GET` | `/videos/:publicId/stream` | `302` to a presigned URL (storage serves `Range`/`206`) |
+| `GET` | `/videos/:publicId/download` | `302` to a presigned URL with `Content-Disposition: attachment` |
+| `GET` | `/videos/:publicId/thumbnail` | `302` to a presigned thumbnail URL |
+
+Flow: the client uploads parts **directly to storage** through presigned URLs — video bytes never pass through the API. On `complete`, the API publishes a `process-video` job (`jobId` = video id, 3 attempts with exponential backoff). The worker probes the source with `ffprobe`, extracts a JPEG thumbnail with `ffmpeg`, uploads it and stores the metadata.
+
+Status lifecycle (`videos.status`): `draft` → `processing` → `ready` | `failed`. `failed` records `failure_reason`: `INVALID_MEDIA` (ffprobe rejected the file; not retried) or `PROCESSING_FAILED` (retries exhausted). Stream, download and thumbnail answer `409 VIDEO_NOT_READY` until `ready`.
+
+Storage keys: `videos/{id}/source` and `videos/{id}/thumbnail.jpg` in the `S3_BUCKET` bucket.
+
+Environment variables added in this phase (see `.env.example`):
+
+- Storage: `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `S3_ENDPOINT`, `S3_PUBLIC_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`
+- Queue: `REDIS_HOST`, `REDIS_PORT`, `QUEUE_PREFIX`
+- Videos: `VIDEO_MAX_SIZE_BYTES` (10 GiB), `UPLOAD_PART_SIZE_BYTES`, `UPLOAD_PART_URL_TTL_SECONDS`, `PLAYBACK_URL_TTL_SECONDS`
+
+**Exception to the service-name rule:** `S3_PUBLIC_ENDPOINT` is `http://localhost:9000` on purpose. It only signs presigned URLs that HTTP clients outside the Docker network (browser, `curl`, `api.http`) call; the URL host is part of the signature, so it must be the address those clients reach. Every server-side call uses `S3_ENDPOINT=http://minio:9000`.
+
+The worker runs `nest start --watch` on the same `dist/` as `nestjs-api`'s `start:dev`; running both in watch mode at the same time can make one delete the other's build output on restart.
 
 ## Code Conventions
 

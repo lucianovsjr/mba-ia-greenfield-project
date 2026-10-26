@@ -143,16 +143,21 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 ## Etapa 3 — Implementação (`/implement 03`)
 
 ### T3.1 — Criar a branch de feature
-- [ ] `git checkout dev && git checkout -b feature/phase-03-videos`.
+- [x] `git checkout dev && git checkout -b feature/phase-03-videos`.
 
 ### T3.2 — Executar os SIs em ordem
-- [ ] Rodar `/implement 03`, SI a SI, respeitando o Dependency Map.
+- [x] Rodar `/implement 03`, SI a SI, respeitando o Dependency Map. → 12/12 SIs `completed` no `progress.md`.
 - [ ] Para cada SI:
   - [ ] Consultar context7 antes de usar qualquer lib (SDK S3, fila, FFmpeg, TypeORM, NestJS).
   - [ ] Seguir as rules do projeto (separação de camadas, repository pattern, transações, filtro de exceções de domínio, DTOs com class-validator).
   - [ ] Rodar os testes do SI; só avançar com a suíte do SI verde.
   - [ ] Atualizar `docs/phases/phase-03-videos/progress.md` (status + testes por SI, no formato da Fase 02).
 - **Pronto quando:** todos os SIs estiverem `done` no `progress.md`.
+- Tasks separadas que surgiram na implementação (fora de escopo, não feitas; detalhes no `progress.md`):
+  - [ ] Juntar os 10 arrays `ALL_ENTITIES` duplicados nos testes de integração numa constante compartilhada em `src/test/` (SI-03.3).
+  - [ ] Fazer o `ChannelsService` usar o `src/common/database/pg-errors.ts` no lugar do detector privado de violação de unicidade do Postgres (SI-03.4).
+  - [ ] `nestjs-api` (`start:dev`) e `video-worker` (`start:worker:dev`) compilam com `--watch` no mesmo `dist/` com `deleteOutDir: true`, e um apaga a saída do outro ao reiniciar → avaliar um `outDir` próprio para o worker (SI-03.8; hoje só documentado como aviso no `nestjs-project/CLAUDE.md`).
+  - [ ] Cosmético: em `videos.service.ts`, o comentário sobre descartar o upload concluído está acima de `getVideo`, mas descreve `discardUpload` (SI-03.10).
 
 ### T3.3 — Validação funcional ponta a ponta (manual, além dos testes)
 - [ ] `docker compose up -d` sobe API, Postgres, Mailpit, storage, fila e worker sem erros.
@@ -168,15 +173,15 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 ## Etapa 4 — Fechamento
 
 ### T4.1 — Definition of Done
-- [ ] `npm test` verde.
-- [ ] `npm run test:e2e` verde.
-- [ ] `npx tsc --noEmit` com exit code 0.
-- [ ] `npm run lint` sem erros.
+- [x] `npm test` verde. → 265/265 (40 suítes).
+- [x] `npm run test:e2e` verde. → 82/82 (9 suítes).
+- [x] `npx tsc --noEmit` com exit code 0.
+- [x] `npm run lint` sem erros. → 0 erros (23 warnings pré-existentes); `npm run build` gera `dist/main.js` e `dist/worker.js`.
 
 ### T4.2 — Atualizar a documentação de IA
-- [ ] `CLAUDE.md` (raiz): estrutura do repositório e arquitetura com a fila definida (sai de "TBD"), worker e storage reais.
-- [ ] `nestjs-project/CLAUDE.md`: seção de vídeos — módulo, endpoints, fila/worker, storage, novos serviços do Compose, comandos e env vars.
-- [ ] Conferir que todo arquivo, endpoint ou comportamento citado existe no código.
+- [x] `CLAUDE.md` (raiz): estrutura do repositório e arquitetura com a fila definida (sai de "TBD"), worker e storage reais. → SI-03.12, junto com o `docs/diagrams/software-arch.mermaid`.
+- [x] `nestjs-project/CLAUDE.md`: seção de vídeos — módulo, endpoints, fila/worker, storage, novos serviços do Compose, comandos e env vars. → SI-03.12.
+- [x] Conferir que todo arquivo, endpoint ou comportamento citado existe no código. → conferido por grep no SI-03.12.
 
 ### T4.3 — Revisão dos Critérios de Aceite (DESAFIO.md)
 - [ ] Decisões e planejamento: todos os artefatos presentes; `validation.md` em `clean`; plano no formato do projeto.
