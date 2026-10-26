@@ -102,8 +102,8 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - [x] Revisar: capability coverage completo (todos os bullets da Fase 03 mapeados), convenções herdadas da Fase 02 presentes. → 9/9 capabilities cobertas; docs ad-hoc herdados: `openapi-docs-nestjs`, `next-frontend-config-base`, `next-frontend-msw-foundation`.
 
 ### T2.2 — `/plan-validate 03`
-- [ ] Gerar `docs/phases/phase-03-videos/validation.md`.
-- [ ] Ler as issues por categoria (inconsistências, decisões faltando, gaps de dependência).
+- [x] Gerar `docs/phases/phase-03-videos/validation.md`. → 1ª rodada: `status: dirty`, 3 issues (AMB-1 payload do pré-cadastro, AMB-2 formatos aceitos, AMB-3 subprojetos afetados).
+- [x] Ler as issues por categoria (inconsistências, decisões faltando, gaps de dependência).
 
 ### T2.3 — `/plan-resolve 03`
 - [ ] Responder às pendências levantadas; atualizar decisões e `context.md`.
