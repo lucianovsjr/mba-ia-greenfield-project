@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 9/12 completed
+**SIs:** 10/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
@@ -87,9 +87,15 @@
   - O e2e aborta no MinIO os multipart uploads dos rascunhos antes de apagar as linhas, a cada teste, e não só no `afterAll` como em `videos-upload-parts.e2e-spec.ts`. Assim não acumulam uploads abertos no bucket.
 
 ### SI-03.10 — Endpoints de streaming, download e thumbnail via redirect pré-assinado
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** 58 unit/integration passing (`videos.service.spec.ts`, 8 novos em `getPlaybackUrl`; `content-disposition.util.spec.ts` 4; `videos.service.integration-spec.ts`, 3 novos com MinIO real) + 5 e2e passing (`test/videos-playback.e2e-spec.ts`, da spec); suíte completa `npm test` 265/265, `test:e2e` 79/79; `tsc --noEmit` exit 0; lint 0 erros (23 warnings pré-existentes)
+- **Observations:**
+  - O `Content-Disposition` do download é montado em `src/videos/content-disposition.util.ts`: `filename="…"` só com ASCII imprimível (aspas, barra invertida, caracteres de controle e não-ASCII viram `_`, o que também impede injeção de CR/LF no header) e `filename*=UTF-8''…` com o nome exato percent-encoded (RFC 5987).
+  - `thumbnail` de um vídeo `ready` sem `thumbnail_key` responde `409 VIDEO_NOT_READY`. O worker sempre grava o thumbnail no sucesso, então é só uma guarda contra `null`, sem código de erro novo.
+  - Os endpoints usam `@Redirect()` sem argumentos e retornam `HttpRedirectResponse` (`{ url, statusCode: 302 }`), conforme a doc do NestJS (context7). A geração da URL fica num helper privado do controller, compartilhado pelas três rotas.
+  - AC #7 (URL expira após `PLAYBACK_URL_TTL_SECONDS`) coberto na integração: `jest.replaceProperty` reduz o TTL para 1 s, a URL responde `200` e, 2,5 s depois, `403`.
+  - O e2e grava um JPEG mínimo (marcadores SOI/APP0/EOI) como thumbnail, porque a asserção é só sobre o `Content-Type` servido pelo storage.
+  - Task separada (cosmético, fora de escopo): em `videos.service.ts`, o comentário sobre descartar o upload concluído está acima de `getVideo`, mas descreve `discardUpload`.
 
 ### SI-03.11 — Pipeline completo de ponta a ponta e artefatos de API (OpenAPI + api.http)
 - **Status:** pending

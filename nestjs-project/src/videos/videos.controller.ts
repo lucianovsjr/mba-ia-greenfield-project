@@ -7,6 +7,8 @@ import {
   HttpStatus,
   Param,
   Post,
+  Redirect,
+  type HttpRedirectResponse,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -26,6 +28,7 @@ import { RequestPartUrlsDto } from './dto/request-part-urls.dto';
 import { UploadedPartsResponse } from './dto/uploaded-parts-response.dto';
 import { VideoResponse } from './dto/video-response.dto';
 import { VideosService } from './videos.service';
+import type { PlaybackKind } from './videos.types';
 
 const NOT_FOUND_RESPONSE = {
   status: 404,
@@ -38,6 +41,23 @@ const NOT_DRAFT_RESPONSE = {
   description: 'The video is not in draft status (upload not in progress)',
   schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
 };
+
+const NOT_READY_RESPONSE = {
+  status: 409,
+  description: 'The video is not ready (still a draft, processing or failed)',
+  schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+};
+
+const redirectResponse = (target: string) => ({
+  status: 302,
+  description: `Redirect to a short-lived presigned URL of the ${target}`,
+  headers: {
+    Location: {
+      description: `Presigned storage URL of the ${target}`,
+      schema: { type: 'string', format: 'uri' },
+    },
+  },
+});
 
 const UNAUTHORIZED_RESPONSE = {
   status: 401,
@@ -110,6 +130,63 @@ export class VideosController {
     @Param('publicId') publicId: string,
   ): Promise<VideoResponse> {
     return this.videosService.getVideo(user.sub, publicId);
+  }
+
+  @Get(':publicId/stream')
+  @Redirect()
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Stream a video',
+    description:
+      'Redirects to a short-lived presigned URL of the video file. The storage serves Range requests with 206 Partial Content, so playback starts without downloading the whole file.',
+  })
+  @ApiResponse(redirectResponse('video file'))
+  @ApiResponse(UNAUTHORIZED_RESPONSE)
+  @ApiResponse(NOT_FOUND_RESPONSE)
+  @ApiResponse(NOT_READY_RESPONSE)
+  async streamVideo(
+    @CurrentUser() user: JwtPayload,
+    @Param('publicId') publicId: string,
+  ): Promise<HttpRedirectResponse> {
+    return this.playbackRedirect(user, publicId, 'stream');
+  }
+
+  @Get(':publicId/download')
+  @Redirect()
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Download a video',
+    description:
+      'Redirects to a short-lived presigned URL of the video file that answers with Content-Disposition: attachment and the original filename.',
+  })
+  @ApiResponse(redirectResponse('video file as an attachment'))
+  @ApiResponse(UNAUTHORIZED_RESPONSE)
+  @ApiResponse(NOT_FOUND_RESPONSE)
+  @ApiResponse(NOT_READY_RESPONSE)
+  async downloadVideo(
+    @CurrentUser() user: JwtPayload,
+    @Param('publicId') publicId: string,
+  ): Promise<HttpRedirectResponse> {
+    return this.playbackRedirect(user, publicId, 'download');
+  }
+
+  @Get(':publicId/thumbnail')
+  @Redirect()
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Get a video thumbnail',
+    description:
+      'Redirects to a short-lived presigned URL of the JPEG thumbnail generated during processing.',
+  })
+  @ApiResponse(redirectResponse('JPEG thumbnail'))
+  @ApiResponse(UNAUTHORIZED_RESPONSE)
+  @ApiResponse(NOT_FOUND_RESPONSE)
+  @ApiResponse(NOT_READY_RESPONSE)
+  async getThumbnail(
+    @CurrentUser() user: JwtPayload,
+    @Param('publicId') publicId: string,
+  ): Promise<HttpRedirectResponse> {
+    return this.playbackRedirect(user, publicId, 'thumbnail');
   }
 
   @Post(':publicId/upload/part-urls')
@@ -219,5 +296,18 @@ export class VideosController {
     @Param('publicId') publicId: string,
   ): Promise<void> {
     await this.videosService.abortUpload(user.sub, publicId);
+  }
+
+  private async playbackRedirect(
+    user: JwtPayload,
+    publicId: string,
+    kind: PlaybackKind,
+  ): Promise<HttpRedirectResponse> {
+    const url = await this.videosService.getPlaybackUrl(
+      user.sub,
+      publicId,
+      kind,
+    );
+    return { url, statusCode: HttpStatus.FOUND };
   }
 }

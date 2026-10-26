@@ -11,6 +11,7 @@ import {
   UnsupportedVideoFormatException,
   UploadSizeMismatchException,
   VideoNotFoundException,
+  VideoNotReadyException,
   VideoTooLargeException,
 } from './exceptions/video.exceptions';
 import { VideoProcessingProducer } from './processing/video-processing.producer';
@@ -71,6 +72,7 @@ describe('VideosService', () => {
     completeMultipartUpload: jest.fn(),
     headObject: jest.fn(),
     deleteObject: jest.fn(),
+    presignGetObject: jest.fn(),
   };
   const producer = { enqueue: jest.fn() };
   const channels = { findByUserId: jest.fn() };
@@ -346,6 +348,98 @@ describe('VideosService', () => {
       await expect(
         service.getVideo('user-2', 'AAAAAAAAAAA'),
       ).rejects.toBeInstanceOf(VideoNotFoundException);
+    });
+  });
+
+  describe('getPlaybackUrl', () => {
+    const readyVideo = (overrides: Record<string, unknown> = {}) =>
+      draftVideo({
+        status: 'ready',
+        upload_id: null,
+        original_filename: 'clip.mp4',
+        content_type: 'video/mp4',
+        thumbnail_key: 'videos/video-1/thumbnail.jpg',
+        ...overrides,
+      });
+
+    beforeEach(() => {
+      storage.presignGetObject.mockResolvedValue('https://storage/signed');
+    });
+
+    it('should presign the source with its content type for stream', async () => {
+      repository.findOne.mockResolvedValue(readyVideo());
+
+      const url = await service.getPlaybackUrl(
+        'user-1',
+        'AAAAAAAAAAA',
+        'stream',
+      );
+
+      expect(url).toBe('https://storage/signed');
+      expect(storage.presignGetObject).toHaveBeenCalledWith(
+        'videos/video-1/source',
+        {
+          endpoint: 'public',
+          expiresIn: CONFIG.playbackUrlTtlSeconds,
+          responseContentType: 'video/mp4',
+        },
+      );
+    });
+
+    it('should presign the source as an attachment with the original filename for download', async () => {
+      repository.findOne.mockResolvedValue(readyVideo());
+
+      await service.getPlaybackUrl('user-1', 'AAAAAAAAAAA', 'download');
+
+      expect(storage.presignGetObject).toHaveBeenCalledWith(
+        'videos/video-1/source',
+        {
+          endpoint: 'public',
+          expiresIn: CONFIG.playbackUrlTtlSeconds,
+          responseContentDisposition: `attachment; filename="clip.mp4"; filename*=UTF-8''clip.mp4`,
+        },
+      );
+    });
+
+    it('should presign the thumbnail key for thumbnail', async () => {
+      repository.findOne.mockResolvedValue(readyVideo());
+
+      await service.getPlaybackUrl('user-1', 'AAAAAAAAAAA', 'thumbnail');
+
+      expect(storage.presignGetObject).toHaveBeenCalledWith(
+        'videos/video-1/thumbnail.jpg',
+        { endpoint: 'public', expiresIn: CONFIG.playbackUrlTtlSeconds },
+      );
+    });
+
+    it('should throw VideoNotReadyException for a ready video without a thumbnail', async () => {
+      repository.findOne.mockResolvedValue(readyVideo({ thumbnail_key: null }));
+
+      await expect(
+        service.getPlaybackUrl('user-1', 'AAAAAAAAAAA', 'thumbnail'),
+      ).rejects.toBeInstanceOf(VideoNotReadyException);
+      expect(storage.presignGetObject).not.toHaveBeenCalled();
+    });
+
+    it.each(['draft', 'processing', 'failed'])(
+      'should throw VideoNotReadyException for a video in %s status',
+      async (status) => {
+        repository.findOne.mockResolvedValue(readyVideo({ status }));
+
+        await expect(
+          service.getPlaybackUrl('user-1', 'AAAAAAAAAAA', 'stream'),
+        ).rejects.toBeInstanceOf(VideoNotReadyException);
+        expect(storage.presignGetObject).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should throw VideoNotFoundException for another user's video", async () => {
+      repository.findOne.mockResolvedValue(readyVideo());
+
+      await expect(
+        service.getPlaybackUrl('user-2', 'AAAAAAAAAAA', 'download'),
+      ).rejects.toBeInstanceOf(VideoNotFoundException);
+      expect(storage.presignGetObject).not.toHaveBeenCalled();
     });
   });
 

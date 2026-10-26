@@ -7,7 +7,11 @@ import { ChannelsService } from '../channels/channels.service';
 import { isPgUniqueViolationOnColumn } from '../common/database/pg-errors';
 import videosConfig from '../config/videos.config';
 import { StoragePartsRejectedError } from '../storage/storage.errors';
-import { StorageService } from '../storage/storage.service';
+import {
+  StorageService,
+  type PresignGetOptions,
+} from '../storage/storage.service';
+import { attachmentDisposition } from './content-disposition.util';
 import type { CompleteUploadDto } from './dto/complete-upload.dto';
 import type { InitiateUploadResponse } from './dto/initiate-upload-response.dto';
 import type { InitiateUploadDto } from './dto/initiate-upload.dto';
@@ -22,6 +26,7 @@ import {
   UnsupportedVideoFormatException,
   UploadSizeMismatchException,
   VideoNotFoundException,
+  VideoNotReadyException,
   VideoTooLargeException,
 } from './exceptions/video.exceptions';
 import { VideoProcessingProducer } from './processing/video-processing.producer';
@@ -33,6 +38,7 @@ import {
   MAX_PUBLIC_ID_ATTEMPTS,
   VIDEO_STORAGE_KEYS,
 } from './videos.constants';
+import type { PlaybackKind } from './videos.types';
 
 const PUBLIC_ID_COLUMN = 'public_id';
 
@@ -214,6 +220,46 @@ export class VideosService {
   // more parts: drop the object and the draft; the client starts over.
   async getVideo(userId: string, publicId: string): Promise<VideoResponse> {
     return toVideoResponse(await this.findOwnedVideo(userId, publicId));
+  }
+
+  // Short-lived presigned GET on the public endpoint: the storage serves the
+  // bytes (with Range/206 for streaming), so they never pass through the API.
+  async getPlaybackUrl(
+    userId: string,
+    publicId: string,
+    kind: PlaybackKind,
+  ): Promise<string> {
+    const video = await this.findOwnedVideo(userId, publicId);
+    if (video.status !== 'ready') {
+      throw new VideoNotReadyException();
+    }
+
+    const options: PresignGetOptions = {
+      endpoint: 'public',
+      expiresIn: this.config.playbackUrlTtlSeconds,
+    };
+    switch (kind) {
+      case 'stream':
+        return this.storageService.presignGetObject(video.source_key, {
+          ...options,
+          responseContentType: video.content_type,
+        });
+      case 'download':
+        return this.storageService.presignGetObject(video.source_key, {
+          ...options,
+          responseContentDisposition: attachmentDisposition(
+            video.original_filename,
+          ),
+        });
+      case 'thumbnail':
+        if (!video.thumbnail_key) {
+          throw new VideoNotReadyException();
+        }
+        return this.storageService.presignGetObject(
+          video.thumbnail_key,
+          options,
+        );
+    }
   }
 
   private async discardUpload(video: Video): Promise<void> {

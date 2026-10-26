@@ -1,7 +1,7 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import type { Queue } from 'bullmq';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, type ConfigType } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { RefreshToken } from '../auth/entities/refresh-token.entity';
@@ -228,5 +228,85 @@ describe('VideosService (integration)', () => {
       name: 'NotFound',
     });
     expect(await queue.getJob(row.id)).toBeUndefined();
+  });
+
+  describe('getPlaybackUrl', () => {
+    const SOURCE_SIZE = 4096;
+
+    // A ready video whose source object was written straight to storage.
+    const seedReadyVideo = async (): Promise<Video> => {
+      const { video } = await initiate();
+      const row = await videoRepository.findOneByOrFail({
+        public_id: video.public_id,
+      });
+      await storage.abortMultipartUpload(row.source_key, row.upload_id!);
+      await storage.putObject(
+        row.source_key,
+        new Uint8Array(SOURCE_SIZE).map((_, i) => i % 256),
+        'video/mp4',
+      );
+      await videoRepository.update(
+        { id: row.id },
+        { status: 'ready', upload_id: null },
+      );
+      return row;
+    };
+
+    it('should issue a stream URL that the storage serves with Range and 206', async () => {
+      const row = await seedReadyVideo();
+
+      const url = await videosService.getPlaybackUrl(
+        userId,
+        row.public_id,
+        'stream',
+      );
+      const res = await fetch(url, { headers: { Range: 'bytes=0-1023' } });
+
+      expect(res.status).toBe(206);
+      expect(res.headers.get('content-range')).toBe(
+        `bytes 0-1023/${SOURCE_SIZE}`,
+      );
+      expect(res.headers.get('content-type')).toBe('video/mp4');
+      expect((await res.arrayBuffer()).byteLength).toBe(1024);
+      await storage.deleteObject(row.source_key);
+    });
+
+    it('should issue a download URL answering with an attachment disposition', async () => {
+      const row = await seedReadyVideo();
+
+      const url = await videosService.getPlaybackUrl(
+        userId,
+        row.public_id,
+        'download',
+      );
+      const res = await fetch(url);
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-disposition')).toBe(
+        `attachment; filename="clip.mp4"; filename*=UTF-8''clip.mp4`,
+      );
+      expect((await res.arrayBuffer()).byteLength).toBe(SOURCE_SIZE);
+      await storage.deleteObject(row.source_key);
+    });
+
+    it('should issue a URL that stops working after the playback TTL', async () => {
+      const row = await seedReadyVideo();
+      jest.replaceProperty(
+        moduleRef.get<ConfigType<typeof videosConfig>>(videosConfig.KEY),
+        'playbackUrlTtlSeconds',
+        1,
+      );
+
+      const url = await videosService.getPlaybackUrl(
+        userId,
+        row.public_id,
+        'stream',
+      );
+      expect((await fetch(url)).status).toBe(200);
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+
+      expect((await fetch(url)).status).toBe(403);
+      await storage.deleteObject(row.source_key);
+    });
   });
 });

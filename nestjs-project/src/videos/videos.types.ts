@@ -16,3 +16,5 @@ export interface VideoMetadata {
   videoCodec: string | null;
   audioCodec: string | null;
 }
+
+export type PlaybackKind = 'stream' | 'download' | 'thumbnail';
