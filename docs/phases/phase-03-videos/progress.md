@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 3/12 completed
+**SIs:** 4/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
@@ -30,9 +30,14 @@
   - Os 10 arrays `ALL_ENTITIES` duplicados poderiam virar uma constante compartilhada em `src/test/` — refatoração fora do escopo deste SI (task separada).
 
 ### SI-03.4 — Endpoint POST /videos (pré-cadastro do rascunho e início do upload)
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** 22 unit/integration passing (5 suítes) + 6 e2e passing (`test/videos-initiate-upload.e2e-spec.ts`, da spec); regressão `test/auth.e2e-spec.ts` 45 passing; `tsc --noEmit` exit 0; eslint limpo
+- **Observations:**
+  - O detector de violação de unicidade do Postgres estava privado em `channels.service.ts`; criado `src/common/database/pg-errors.ts` para os vídeos sem refatorar o código da Fase 02 — unificar o uso em `ChannelsService` é task separada.
+  - Criado `test/helpers/e2e-app.ts` (bootstrap com a config global do `main.ts` + usuário registrado/confirmado/logado, limpando o throttler) para ser reutilizado pelos e2e das próximas specs de vídeo; o `MailService` é espionado direto pelo container (singleton).
+  - `ChannelsService.findByUserId` adicionado (Tech action 4) e coberto no teste de integração existente de channels.
+  - AC #8 (colisão de `public_id`) coberto pela integração (`videos.service.integration-spec.ts`) e pelo unit; sem cenário e2e, conforme o aviso do `/plan-test-specs`.
+  - 1 tentativa de correção: lint apontou import não usado e variável descartada no e2e; ajustados.
 
 ### SI-03.5 — Endpoints de partes do upload: URLs pré-assinadas, listagem para retomada e abort
 - **Status:** pending

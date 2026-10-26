@@ -44,6 +44,23 @@ describe('ChannelsService (integration)', () => {
     );
   }
 
+  describe('findByUserId', () => {
+    it('returns the channel owned by the user', async () => {
+      const user = await createUser();
+      const created = await channelsService.createChannel(user.id, user.email);
+
+      const found = await channelsService.findByUserId(user.id);
+
+      expect(found?.id).toBe(created.id);
+    });
+
+    it('returns null when the user has no channel', async () => {
+      const user = await createUser();
+
+      expect(await channelsService.findByUserId(user.id)).toBeNull();
+    });
+  });
+
   describe('createChannel', () => {
     it('persists a channel derived from email', async () => {
       const user = await createUser();
