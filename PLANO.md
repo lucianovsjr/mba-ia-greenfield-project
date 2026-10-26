@@ -15,7 +15,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 ### T0.1 — Preparar branches (Git Flow)
 - [x] Garantir que `dev` está atualizada a partir de `main` (estavam iguais).
 - [x] Commitar o `PLANO.md` junto com o `DESAFIO.md` na branch `docs/desafio-fase-03` e fazer o merge dela na `dev`.
-- [ ] Criar as branches de trabalho a partir da `dev` (cada uma só depois do merge da anterior):
+- [x] Criar as branches de trabalho a partir da `dev` (cada uma só depois do merge da anterior): → as quatro existem; `bugfix/baseline-lint-and-tests`, `feature/mcp-context7` e `docs/phase-03-planning` já entraram na `dev`.
   - `bugfix/baseline-lint-and-tests` — correção dos problemas pré-existentes (T0.4).
   - `feature/mcp-context7` — configuração do MCP context7 (T0.5).
   - `docs/phase-03-planning` — research + artefatos de planejamento (Etapas 1–2). ✅ criada a partir da `dev`.
@@ -147,11 +147,11 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 
 ### T3.2 — Executar os SIs em ordem
 - [x] Rodar `/implement 03`, SI a SI, respeitando o Dependency Map. → 12/12 SIs `completed` no `progress.md`.
-- [ ] Para cada SI:
-  - [ ] Consultar context7 antes de usar qualquer lib (SDK S3, fila, FFmpeg, TypeORM, NestJS).
-  - [ ] Seguir as rules do projeto (separação de camadas, repository pattern, transações, filtro de exceções de domínio, DTOs com class-validator).
-  - [ ] Rodar os testes do SI; só avançar com a suíte do SI verde.
-  - [ ] Atualizar `docs/phases/phase-03-videos/progress.md` (status + testes por SI, no formato da Fase 02).
+- [x] Para cada SI:
+  - [x] Consultar context7 antes de usar qualquer lib (SDK S3, fila, FFmpeg, TypeORM, NestJS). → versões fixadas no `library-refs.md`; consultas registradas nas observações dos SIs (FFmpeg/ffprobe via `child_process`, sem lib npm).
+  - [x] Seguir as rules do projeto (separação de camadas, repository pattern, transações, filtro de exceções de domínio, DTOs com class-validator).
+  - [x] Rodar os testes do SI; só avançar com a suíte do SI verde. → contagem de testes por SI no `progress.md`.
+  - [x] Atualizar `docs/phases/phase-03-videos/progress.md` (status + testes por SI, no formato da Fase 02).
 - **Pronto quando:** todos os SIs estiverem `done` no `progress.md`.
 - Tasks separadas que surgiram na implementação (fora de escopo, não feitas; detalhes no `progress.md`):
   - [ ] Juntar os 10 arrays `ALL_ENTITIES` duplicados nos testes de integração numa constante compartilhada em `src/test/` (SI-03.3).
@@ -193,7 +193,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - [x] Infra/qualidade: storage, fila e worker no Compose; migration + entidade ligada ao canal; testes verdes; DoD completo; Git Flow respeitado. → `minio`, `minio-init`, `redis` e `video-worker` no `compose.yaml`; `1792977734660-CreateVideos.ts`; `Video` `@ManyToOne(Channel)` com `ON DELETE CASCADE`. DoD reexecutada na `HEAD`: `npm test` 265/265 (40 suítes), e2e 82/82 (9 suítes), `tsc` exit 0, eslint 0 erros (23 warnings pré-existentes). `main` = `origin/main` (só commits do upstream); todo o trabalho entrou na `dev` via merge de `bugfix/*`, `feature/*` e `docs/*`.
 - [x] Documentação: `CLAUDE.md` coerente com o código. → arquivos, rotas, scripts, env vars, job (`process-video`, 3 tentativas, backoff exponencial) e `ffmpeg` no `Dockerfile.dev` conferidos contra o código. Corrigida a linha do `CLAUDE.md` raiz que dizia que o `next-frontend/` "not yet initialized" (texto herdado do repositório base; o frontend das Fases 01–02 existe).
 - [x] Checar a lista de **reprova automática** item a item. → nenhum item se aplica: workflow completo com artefatos; plano com SIs + Technical Specs e `validation.md` `clean`; bytes do vídeo vão direto ao MinIO por URL pré-assinada (API ociosa durante o envio de 2,9GB); fila, worker e storage reais no Compose; `tsc`/lint/suíte verdes; nenhum commit na `main`; `CLAUDE.md` coerente; ferramenta usada = Claude Code.
-- Pendências que não bloqueiam os critérios, mas seguem abertas neste plano: revisões humanas da T1.2 e da T2.5, e os sub-checks da T3.2.
+- Pendências que não bloqueiam os critérios, mas seguem abertas neste plano: revisões humanas da T1.2 e da T2.5 (os sub-checks da T3.2 foram conferidos contra o `progress.md` e marcados).
 
 ### T4.4 — Integração e entrega
 - [ ] Merge de `feature/phase-03-videos` na `dev` (com autorização).
