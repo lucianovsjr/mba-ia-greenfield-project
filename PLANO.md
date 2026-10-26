@@ -188,11 +188,12 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - [x] Conferir que todo arquivo, endpoint ou comportamento citado existe no código. → conferido por grep no SI-03.12.
 
 ### T4.3 — Revisão dos Critérios de Aceite (DESAFIO.md)
-- [ ] Decisões e planejamento: todos os artefatos presentes; `validation.md` em `clean`; plano no formato do projeto.
-- [ ] Feature: upload 10GB sem travar + rascunho; processamento + thumbnail; URL única; streaming + download; ciclo de status no banco.
-- [ ] Infra/qualidade: storage, fila e worker no Compose; migration + entidade ligada ao canal; testes verdes; DoD completo; Git Flow respeitado.
-- [ ] Documentação: `CLAUDE.md` coerente com o código.
-- [ ] Checar a lista de **reprova automática** item a item.
+- [x] Decisões e planejamento: todos os artefatos presentes; `validation.md` em `clean`; plano no formato do projeto. → decisões `status: decided`, 17/17 TDs com `Decision:` preenchido (fila, upload, streaming, processamento/thumbnail, ciclo de status); pasta da fase com `context.md`, `validation.md` (`status: clean`), `library-refs.md`, `phase-03-videos.md` (SI-03.1…SI-03.12, Data Model, API Contracts, Authorization Matrix, Error Catalog, Events/Messages, Dependency Map, Deliverables) e `progress.md` (12/12 `completed`; o contador do cabeçalho dizia 11/12 e foi corrigido).
+- [x] Feature: upload 10GB sem travar + rascunho; processamento + thumbnail; URL única; streaming + download; ciclo de status no banco. → evidências na T3.3; URL única = `public_id` aleatório de 11 caracteres com índice único + retry (TD-12).
+- [x] Infra/qualidade: storage, fila e worker no Compose; migration + entidade ligada ao canal; testes verdes; DoD completo; Git Flow respeitado. → `minio`, `minio-init`, `redis` e `video-worker` no `compose.yaml`; `1792977734660-CreateVideos.ts`; `Video` `@ManyToOne(Channel)` com `ON DELETE CASCADE`. DoD reexecutada na `HEAD`: `npm test` 265/265 (40 suítes), e2e 82/82 (9 suítes), `tsc` exit 0, eslint 0 erros (23 warnings pré-existentes). `main` = `origin/main` (só commits do upstream); todo o trabalho entrou na `dev` via merge de `bugfix/*`, `feature/*` e `docs/*`.
+- [x] Documentação: `CLAUDE.md` coerente com o código. → arquivos, rotas, scripts, env vars, job (`process-video`, 3 tentativas, backoff exponencial) e `ffmpeg` no `Dockerfile.dev` conferidos contra o código. Corrigida a linha do `CLAUDE.md` raiz que dizia que o `next-frontend/` "not yet initialized" (texto herdado do repositório base; o frontend das Fases 01–02 existe).
+- [x] Checar a lista de **reprova automática** item a item. → nenhum item se aplica: workflow completo com artefatos; plano com SIs + Technical Specs e `validation.md` `clean`; bytes do vídeo vão direto ao MinIO por URL pré-assinada (API ociosa durante o envio de 2,9GB); fila, worker e storage reais no Compose; `tsc`/lint/suíte verdes; nenhum commit na `main`; `CLAUDE.md` coerente; ferramenta usada = Claude Code.
+- Pendências que não bloqueiam os critérios, mas seguem abertas neste plano: revisões humanas da T1.2 e da T2.5, e os sub-checks da T3.2.
 
 ### T4.4 — Integração e entrega
 - [ ] Merge de `feature/phase-03-videos` na `dev` (com autorização).
