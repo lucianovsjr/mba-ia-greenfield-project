@@ -106,9 +106,10 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - [x] Ler as issues por categoria (inconsistências, decisões faltando, gaps de dependência).
 
 ### T2.3 — `/plan-resolve 03`
-- [ ] Responder às pendências levantadas; atualizar decisões e `context.md`.
-- [ ] Fixar as libs novas via **context7** (versões compatíveis com NestJS 11 / Node do projeto) → `docs/phases/phase-03-videos/library-refs.md`. Esperado: SDK S3, lib da fila escolhida, wrapper/binário FFmpeg (conforme decidido).
-- [ ] Sinalizar qualquer divergência entre a doc retornada e a versão instalada.
+- [x] Responder às pendências levantadas; atualizar decisões e `context.md`. → AMB-1 e AMB-2 viraram Revisions da TD-16 (`title` obrigatório no initiate; allowlist `.mp4`/`.mov`/`.mpg`/`.mpeg`/`.avi` + ffprobe); AMB-3 esclarecida (só `nestjs-project/`, frontend registrado como deferred).
+- [x] Fixar as libs novas via **context7** (versões compatíveis com NestJS 11 / Node do projeto) → `docs/phases/phase-03-videos/library-refs.md`. Fixadas: `bullmq@^5.81.5`, `@nestjs/bullmq@^11.0.5`, `@aws-sdk/client-s3@^3.1156.0`, `@aws-sdk/s3-request-presigner@^3.1156.0`. FFmpeg é binário do SO (sem lib npm).
+- [x] Sinalizar qualquer divergência entre a doc retornada e a versão instalada. → a doc do BullMQ no context7 é da era v6; as APIs usadas existem iguais na 5.x (registrado no `library-refs.md`).
+- Task separada (fora de escopo, não feita): o regex `S_NN` em `.claude/agents/decisions-reader.md` usa lookahead, que o ripgrep não suporta sem PCRE2. O subagente contornou com um padrão equivalente; corrigir a spec do agente numa branch própria.
 
 ### T2.4 — Iterar validate ⇄ resolve até `clean`
 - [ ] Repetir T2.2 → T2.3 até `validation.md` terminar com **`status: clean`**.
