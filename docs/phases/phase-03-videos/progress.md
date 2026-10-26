@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 1/12 completed
+**SIs:** 2/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
@@ -13,9 +13,12 @@
   - Validado manualmente: `minio-init` sai com 0 e cria `streamtube-videos`; rodar de novo é idempotente; `redis-cli ping` → `PONG`; `ffprobe`/`ffmpeg` 5.1.9 no container `nestjs-api`.
 
 ### SI-03.2 — Módulo de storage S3 (cliente interno + cliente de presign)
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** 8 passing (`storage.module.spec.ts` 1 + `storage.service.integration-spec.ts` 7, MinIO real); `tsc --noEmit` exit 0; eslint limpo
+- **Observations:**
+  - A suíte de integração sobrescreve `storageConfig.KEY` com `publicEndpoint = S3_ENDPOINT` para que as URLs pré-assinadas sejam alcançáveis de dentro do container; a asserção de host público vs. interno usa um segundo módulo com a config padrão (`localhost:9000`), só assinando (sem rede).
+  - 1 tentativa de correção: o `tsc` rejeitou `Buffer` como `body` do `fetch` no teste; corrigido enviando `new Uint8Array(body)`.
+  - `listParts` pagina via `PartNumberMarker` (`IsTruncated`), cobrindo uploads com mais de 1000 partes.
 
 ### SI-03.3 — Entidade Video, migration e VideosModule
 - **Status:** pending
