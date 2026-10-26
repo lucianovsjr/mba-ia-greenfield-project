@@ -89,9 +89,9 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - **Pronto quando:** todas as TDs estiverem com status decidido, revisadas criticamente por mim, sem requisito inventado fora do escopo da Fase 03.
 
 ### T1.2 — Revisão crítica do research
-- [ ] Conferir cada recomendação contra o enunciado (10GB sem passar pela API, infra real no Compose, nada de mock do que dá para rodar).
-- [ ] Conferir que funcionalidades das Fases 04/05 (edição, publicação, visibilidade, player) **não** entraram no escopo.
-- [ ] Refinar o prompt e reexecutar se alguma TD vier rasa.
+- [x] Conferir cada recomendação contra o enunciado (10GB sem passar pela API, infra real no Compose, nada de mock do que dá para rodar).
+- [x] Conferir que funcionalidades das Fases 04/05 (edição, publicação, visibilidade, player) **não** entraram no escopo.
+- [x] Refinar o prompt e reexecutar se alguma TD vier rasa. → revisão feita; nenhuma reexecução necessária.
 
 ---
 
@@ -120,7 +120,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
   - [x] Step Implementations `SI-03.1` … `SI-03.12` (cada uma com arquivos, ações técnicas e seção de Tests).
   - [x] Technical Specifications: **Data Model**, **API Contracts**, **Authorization Matrix**, **Error Catalog**, **Events/Messages** (payload do job, produtor, consumidor, retries).
   - [x] **Dependency Map** e **Deliverables**.
-- [ ] Revisão crítica do plano (minha) — checklist mínimo de cobertura (pré-conferido pelo agente, falta a revisão humana):
+- [x] Revisão crítica do plano (minha) — checklist mínimo de cobertura (pré-conferido pelo agente e revisado por mim):
   - [x] Infra no `compose.yaml`: storage (MinIO + criação de bucket), fila, worker — usando nomes de serviço como host. → SI-03.1 (`minio`, `minio-init`, `redis`) e SI-03.8 (`video-worker`).
   - [x] Namespaces de configuração/env para storage, fila e worker. → SI-03.1 (`storage`, `queue`, `videos`).
   - [x] Entidade `Video` ligada a `Channel` + migration `<timestamp>-CreateVideos.ts`. → SI-03.3.
@@ -193,7 +193,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - [x] Infra/qualidade: storage, fila e worker no Compose; migration + entidade ligada ao canal; testes verdes; DoD completo; Git Flow respeitado. → `minio`, `minio-init`, `redis` e `video-worker` no `compose.yaml`; `1792977734660-CreateVideos.ts`; `Video` `@ManyToOne(Channel)` com `ON DELETE CASCADE`. DoD reexecutada na `HEAD`: `npm test` 265/265 (40 suítes), e2e 82/82 (9 suítes), `tsc` exit 0, eslint 0 erros (23 warnings pré-existentes). `main` = `origin/main` (só commits do upstream); todo o trabalho entrou na `dev` via merge de `bugfix/*`, `feature/*` e `docs/*`.
 - [x] Documentação: `CLAUDE.md` coerente com o código. → arquivos, rotas, scripts, env vars, job (`process-video`, 3 tentativas, backoff exponencial) e `ffmpeg` no `Dockerfile.dev` conferidos contra o código. Corrigida a linha do `CLAUDE.md` raiz que dizia que o `next-frontend/` "not yet initialized" (texto herdado do repositório base; o frontend das Fases 01–02 existe).
 - [x] Checar a lista de **reprova automática** item a item. → nenhum item se aplica: workflow completo com artefatos; plano com SIs + Technical Specs e `validation.md` `clean`; bytes do vídeo vão direto ao MinIO por URL pré-assinada (API ociosa durante o envio de 2,9GB); fila, worker e storage reais no Compose; `tsc`/lint/suíte verdes; nenhum commit na `main`; `CLAUDE.md` coerente; ferramenta usada = Claude Code.
-- Pendências que não bloqueiam os critérios, mas seguem abertas neste plano: revisões humanas da T1.2 e da T2.5 (os sub-checks da T3.2 foram conferidos contra o `progress.md` e marcados).
+- Pendências que não bloqueavam os critérios, já fechadas: revisões humanas da T1.2 e da T2.5 e os sub-checks da T3.2 (conferidos contra o `progress.md`).
 
 ### T4.4 — Integração e entrega
 - [ ] Merge de `feature/phase-03-videos` na `dev` (com autorização).
