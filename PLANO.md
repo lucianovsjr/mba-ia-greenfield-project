@@ -161,7 +161,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - [ ] Vídeo inválido/corrompido → status de erro.
 - [ ] Streaming responde `206 Partial Content` com header `Range`; download funciona.
 - [ ] Validar o upload grande: arquivo de vários GB enviado sem passar pela API (a API continua respondendo durante o envio). Limite de 10GB aplicado conforme o plano.
-- [ ] Atualizar `nestjs-project/api.http` com os novos endpoints, se for o padrão adotado no plano.
+- [x] Atualizar `nestjs-project/api.http` com os novos endpoints, se for o padrão adotado no plano. → feito no SI-03.11 (passos 10–19); falta executá-lo contra o Compose.
 
 ---
 

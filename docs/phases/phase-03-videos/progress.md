@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 10/12 completed
+**SIs:** 11/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
@@ -98,9 +98,15 @@
   - Task separada (cosmético, fora de escopo): em `videos.service.ts`, o comentário sobre descartar o upload concluído está acima de `getVideo`, mas descreve `discardUpload`.
 
 ### SI-03.11 — Pipeline completo de ponta a ponta e artefatos de API (OpenAPI + api.http)
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** 9 e2e passing (`test/videos-pipeline.e2e-spec.ts` 2, `test/swagger.e2e-spec.ts` 7, 1 novo); suíte completa `npm test` 265/265, `test:e2e` 82/82; `tsc --noEmit` exit 0; lint 0 erros (23 warnings pré-existentes)
+- **Observations:**
+  - O pipeline sobe a API (`createE2eApp`) e, no mesmo processo, o `WorkerModule` inteiro via `Test.createTestingModule(...).init()` — o BullMQ registra o processor no `onModuleInit` (doc do NestJS, context7). Os dois lados só se falam pela fila no Redis.
+  - Ambos os módulos sobrescrevem `queueConfig.KEY` com o prefixo `test-pipeline`, isolando os jobs do pipeline dos outros testes (prefixo `test`) e do container `video-worker` (prefixo `bull`).
+  - O upload no teste segue o `upload.part_count`/`part_size_bytes` devolvidos pela API (a fixture de 3 s cabe numa parte de 100 MiB); a asserção "nenhum byte passa pela API" verifica que todo `PUT` vai para o host do MinIO.
+  - Caminho de falha: bytes aleatórios com extensão `.mp4` passam pela allowlist, o ffprobe rejeita e o vídeo termina `failed`/`INVALID_MEDIA` após 1 tentativa; `stream` responde `409`.
+  - `swagger.e2e-spec.ts` ganhou um teste que confere as 9 operações de `/videos`, a tag `videos` e que toda resposta ≥ 400 referencia `ApiErrorEnvelope`. O `openapi.json` foi regenerado com `npm run openapi:export`.
+  - `api.http`: passos 10–19 (initiate → part-urls → `PUT` direto ao storage com o arquivo local `@videoFile` → parts → complete → get → stream/download/thumbnail com `@no-redirect` → abort), capturando `public_id`, URL da parte e `ETag` por response variables. A execução manual contra o Compose fica para a T3.3 (exige API e `video-worker` rodando).
 
 ### SI-03.12 — Atualizar a documentação de IA (CLAUDE.md e diagrama de arquitetura)
 - **Status:** pending
