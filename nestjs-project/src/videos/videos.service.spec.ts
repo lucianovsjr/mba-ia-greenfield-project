@@ -2,15 +2,18 @@ import { Test } from '@nestjs/testing';
 import { DataSource, QueryFailedError } from 'typeorm';
 import { ChannelsService } from '../channels/channels.service';
 import videosConfig from '../config/videos.config';
+import { StoragePartsRejectedError } from '../storage/storage.errors';
 import { StorageService } from '../storage/storage.service';
 import type { InitiateUploadDto } from './dto/initiate-upload.dto';
 import {
   InvalidUploadPartsException,
   InvalidUploadStateException,
   UnsupportedVideoFormatException,
+  UploadSizeMismatchException,
   VideoNotFoundException,
   VideoTooLargeException,
 } from './exceptions/video.exceptions';
+import { VideoProcessingProducer } from './processing/video-processing.producer';
 import * as publicIdUtil from './public-id.util';
 import { MAX_PUBLIC_ID_ATTEMPTS } from './videos.constants';
 import { VideosService } from './videos.service';
@@ -50,7 +53,12 @@ describe('VideosService', () => {
     })),
     save: jest.fn(),
   };
-  const repository = { findOne: jest.fn(), delete: jest.fn() };
+  const repository = {
+    findOne: jest.fn(),
+    delete: jest.fn(),
+    update: jest.fn(),
+    findOneByOrFail: jest.fn(),
+  };
   const dataSource = {
     transaction: jest.fn((cb: (m: typeof manager) => unknown) => cb(manager)),
     getRepository: jest.fn(() => repository),
@@ -60,7 +68,11 @@ describe('VideosService', () => {
     abortMultipartUpload: jest.fn(),
     presignUploadPart: jest.fn(),
     listParts: jest.fn(),
+    completeMultipartUpload: jest.fn(),
+    headObject: jest.fn(),
+    deleteObject: jest.fn(),
   };
+  const producer = { enqueue: jest.fn() };
   const channels = { findByUserId: jest.fn() };
 
   beforeEach(async () => {
@@ -86,6 +98,7 @@ describe('VideosService', () => {
         { provide: DataSource, useValue: dataSource },
         { provide: StorageService, useValue: storage },
         { provide: ChannelsService, useValue: channels },
+        { provide: VideoProcessingProducer, useValue: producer },
         { provide: videosConfig.KEY, useValue: CONFIG },
       ],
     }).compile();
@@ -311,6 +324,127 @@ describe('VideosService', () => {
         'upload-1',
       );
       expect(repository.delete).toHaveBeenCalledWith({ id: 'video-1' });
+    });
+  });
+  describe('completeUpload', () => {
+    const parts = { parts: [{ part_number: 1, etag: '"abc"' }] };
+    const persisted = (status: string) => ({
+      ...draftVideo({
+        status,
+        upload_id: status === 'draft' ? 'upload-1' : null,
+      }),
+      thumbnail_key: null,
+      duration_seconds: null,
+      metadata: null,
+      failure_reason: null,
+      created_at: new Date('2026-10-25T00:00:00Z'),
+      updated_at: new Date('2026-10-25T00:00:00Z'),
+    });
+
+    beforeEach(() => {
+      repository.findOne.mockResolvedValue(persisted('draft'));
+      storage.completeMultipartUpload.mockResolvedValue(undefined);
+      storage.headObject.mockResolvedValue(104857600 * 2 + 1);
+      repository.update.mockResolvedValue({ affected: 1 });
+      repository.findOneByOrFail.mockResolvedValue(persisted('processing'));
+    });
+
+    it('should complete, move to processing and enqueue the job', async () => {
+      const result = await service.completeUpload(
+        'user-1',
+        'AAAAAAAAAAA',
+        parts,
+      );
+
+      expect(storage.completeMultipartUpload).toHaveBeenCalledWith(
+        'videos/video-1/source',
+        'upload-1',
+        [{ partNumber: 1, etag: '"abc"' }],
+      );
+      expect(repository.update).toHaveBeenCalledWith(
+        { id: 'video-1', status: 'draft' },
+        { status: 'processing', upload_id: null },
+      );
+      expect(producer.enqueue).toHaveBeenCalledWith('video-1');
+      expect(result.status).toBe('processing');
+    });
+
+    it('should re-enqueue without touching storage when already processing', async () => {
+      repository.findOne.mockResolvedValue(persisted('processing'));
+
+      const result = await service.completeUpload(
+        'user-1',
+        'AAAAAAAAAAA',
+        parts,
+      );
+
+      expect(result.status).toBe('processing');
+      expect(producer.enqueue).toHaveBeenCalledWith('video-1');
+      expect(storage.completeMultipartUpload).not.toHaveBeenCalled();
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it.each(['ready', 'failed'])(
+      'should reject completing a %s video',
+      async (status) => {
+        repository.findOne.mockResolvedValue(persisted(status));
+
+        await expect(
+          service.completeUpload('user-1', 'AAAAAAAAAAA', parts),
+        ).rejects.toBeInstanceOf(InvalidUploadStateException);
+        expect(producer.enqueue).not.toHaveBeenCalled();
+      },
+    );
+
+    it('should map a storage rejection of the parts to InvalidUploadPartsException', async () => {
+      storage.completeMultipartUpload.mockRejectedValue(
+        new StoragePartsRejectedError('InvalidPart', 'bad etag'),
+      );
+
+      await expect(
+        service.completeUpload('user-1', 'AAAAAAAAAAA', parts),
+      ).rejects.toBeInstanceOf(InvalidUploadPartsException);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('should propagate unexpected storage errors unchanged', async () => {
+      storage.completeMultipartUpload.mockRejectedValue(new Error('network'));
+
+      await expect(
+        service.completeUpload('user-1', 'AAAAAAAAAAA', parts),
+      ).rejects.toThrow('network');
+    });
+
+    it('should discard the upload when the stored size differs from the declared size', async () => {
+      storage.headObject.mockResolvedValue(1024);
+
+      await expect(
+        service.completeUpload('user-1', 'AAAAAAAAAAA', parts),
+      ).rejects.toBeInstanceOf(UploadSizeMismatchException);
+      expect(storage.deleteObject).toHaveBeenCalledWith(
+        'videos/video-1/source',
+      );
+      expect(repository.delete).toHaveBeenCalledWith({ id: 'video-1' });
+      expect(producer.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('should discard the upload when the stored object exceeds the maximum size', async () => {
+      storage.headObject.mockResolvedValue(CONFIG.maxSizeBytes + 1);
+
+      await expect(
+        service.completeUpload('user-1', 'AAAAAAAAAAA', parts),
+      ).rejects.toBeInstanceOf(VideoTooLargeException);
+      expect(storage.deleteObject).toHaveBeenCalled();
+      expect(repository.delete).toHaveBeenCalledWith({ id: 'video-1' });
+    });
+
+    it('should reject when a concurrent request already moved the video', async () => {
+      repository.update.mockResolvedValue({ affected: 0 });
+
+      await expect(
+        service.completeUpload('user-1', 'AAAAAAAAAAA', parts),
+      ).rejects.toBeInstanceOf(InvalidUploadStateException);
+      expect(producer.enqueue).not.toHaveBeenCalled();
     });
   });
 });

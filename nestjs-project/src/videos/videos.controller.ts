@@ -18,11 +18,13 @@ import {
 import type { JwtPayload } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ApiErrorEnvelope } from '../common/openapi/api-error-envelope.dto';
+import { CompleteUploadDto } from './dto/complete-upload.dto';
 import { InitiateUploadResponse } from './dto/initiate-upload-response.dto';
 import { InitiateUploadDto } from './dto/initiate-upload.dto';
 import { PartUrlsResponse } from './dto/part-urls-response.dto';
 import { RequestPartUrlsDto } from './dto/request-part-urls.dto';
 import { UploadedPartsResponse } from './dto/uploaded-parts-response.dto';
+import { VideoResponse } from './dto/video-response.dto';
 import { VideosService } from './videos.service';
 
 const NOT_FOUND_RESPONSE = {
@@ -138,6 +140,45 @@ export class VideosController {
     @Param('publicId') publicId: string,
   ): Promise<UploadedPartsResponse> {
     return this.videosService.listUploadedParts(user.sub, publicId);
+  }
+
+  @Post(':publicId/upload/complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Complete an upload',
+    description:
+      'Completes the multipart upload, checks the stored size against the declared one, moves the video to processing and enqueues the processing job. Calling it again while the video is processing is a safe retry.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Upload completed; video is processing',
+    type: VideoResponse,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation failed or the storage rejected the part list',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse(UNAUTHORIZED_RESPONSE)
+  @ApiResponse(NOT_FOUND_RESPONSE)
+  @ApiResponse({
+    status: 409,
+    description:
+      'Video already ready/failed, or stored size differs from the declared size',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 413,
+    description: 'Stored object exceeds the maximum allowed size',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  async completeUpload(
+    @CurrentUser() user: JwtPayload,
+    @Param('publicId') publicId: string,
+    @Body() dto: CompleteUploadDto,
+  ): Promise<VideoResponse> {
+    return this.videosService.completeUpload(user.sub, publicId, dto);
   }
 
   @Delete(':publicId/upload')

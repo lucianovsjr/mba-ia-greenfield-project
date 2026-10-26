@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 5/12 completed
+**SIs:** 6/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
@@ -48,9 +48,12 @@
   - Integração e e2e sobrescrevem `storageConfig` com `publicEndpoint = S3_ENDPOINT` (via `createE2eApp(customize)` no e2e), conforme o Setup da spec.
 
 ### SI-03.6 — Endpoint de conclusão do upload e publicação do job de processamento
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** 40 unit/integration passing (`videos.service.spec.ts`, `videos.service.integration-spec.ts`, `queue.module.spec.ts`, `videos.module.spec.ts`; Postgres + MinIO + Redis reais) + 5 e2e passing (`test/videos-upload-complete.e2e-spec.ts`, da spec); regressão dos e2e de vídeo anteriores e `GET /` verde (18 no total); Jest encerra sem open handles; `tsc --noEmit` exit 0; eslint limpo
+- **Observations:**
+  - A transição `draft → processing` é um update condicional (`WHERE status = 'draft'`); se nada for afetado (requisição concorrente), retorna `409 INVALID_UPLOAD_STATE` sem enfileirar.
+  - Retry de `complete` com o vídeo já em `processing` re-adiciona o job com o mesmo `jobId` (ignorado pelo BullMQ, confirmado na doc via context7) e responde `200`, sem tocar no storage.
+  - 2 tentativas de correção: (1) lint — fila do e2e tipada como `Queue<ProcessVideoJobData>`; (2) testes — `mockRejectedValue` vazava entre testes unitários (`clearAllMocks` não reseta implementações) e `getJobCounts` também devolve `paused`; ambos eram defeitos dos testes, não do service.
 
 ### SI-03.7 — Módulo de mídia: wrappers de ffprobe e ffmpeg
 - **Status:** pending
