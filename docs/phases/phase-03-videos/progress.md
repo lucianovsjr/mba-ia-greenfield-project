@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 6/12 completed
+**SIs:** 7/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
@@ -56,9 +56,15 @@
   - 2 tentativas de correção: (1) lint — fila do e2e tipada como `Queue<ProcessVideoJobData>`; (2) testes — `mockRejectedValue` vazava entre testes unitários (`clearAllMocks` não reseta implementações) e `getJobCounts` também devolve `paused`; ambos eram defeitos dos testes, não do service.
 
 ### SI-03.7 — Módulo de mídia: wrappers de ffprobe e ffmpeg
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** 20 passing (`media-probe.service.spec.ts` 9 + `thumbnail.service.spec.ts` 5 + `media-probe.service.integration-spec.ts` 4 + `thumbnail.service.integration-spec.ts` 2; ffprobe/ffmpeg reais no container); `tsc --noEmit` exit 0; eslint limpo
+- **Observations:**
+  - O runner é injetado pelo token `PROCESS_RUNNER` (`useValue: runProcess`), o que permite mockar o binário nos unit tests sem mexer no `child_process`. Os timeouts (`FFPROBE_TIMEOUT_MS` 60s, `FFMPEG_TIMEOUT_MS` 120s) ficam em `media.constants.ts`, porque o plano não define env var para eles.
+  - Só exit ≠ 0 com stderr `Invalid data found when processing input` (AVERROR_INVALIDDATA, confirmado no container para bytes aleatórios) vira `InvalidMediaError`. Falhas de rede/storage (ex.: `403 Forbidden` na URL pré-assinada) e timeout propagam como `ProcessExecutionError`, para continuarem retentáveis no SI-03.8 (TD-15).
+  - Os argumentos do `ffmpeg` incluem `-v error -y` além dos do plano. O `-y` evita que o ffmpeg trave esperando confirmação de overwrite no stdin quando o arquivo de saída já existe, e o `-v error` reduz o stderr capturado.
+  - `frameRate` usa `avg_frame_rate` com fallback para `r_frame_rate`. `"0/0"` vira `null`, e o valor é arredondado a 3 casas (`30000/1001` → `29.97`).
+  - `child_process.execFile` é API nativa do Node (sem lib npm), por isso não houve consulta ao context7. O comportamento do erro (`code` numérico, `killed`/`signal` no timeout) segue a API documentada do Node 25.6 do container.
+  - 1 tentativa de correção: o lint apontou formatação do Prettier em 2 arquivos novos, corrigida com `eslint --fix`.
 
 ### SI-03.8 — Worker de vídeo: entrypoint standalone, processamento do job e serviço no Compose
 - **Status:** pending
