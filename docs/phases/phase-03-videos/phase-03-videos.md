@@ -116,7 +116,7 @@ Deliver video upload of files up to 10GB directly to object storage without impa
 ### SI-03.4 — Endpoint POST /videos (pré-cadastro do rascunho e início do upload)
 
 **Route:** POST /videos
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-initiate-upload.plan.md`
 **Authorization:** Authenticated (owner = canal do usuário autenticado)
 
 **Description:** Ao iniciar o upload, valida título, formato e tamanho, pré-cadastra o vídeo como rascunho com `public_id` único e abre o multipart upload no storage, devolvendo o tamanho e a quantidade de partes.
@@ -157,7 +157,7 @@ Deliver video upload of files up to 10GB directly to object storage without impa
 ### SI-03.5 — Endpoints de partes do upload: URLs pré-assinadas, listagem para retomada e abort
 
 **Route:** POST /videos/:publicId/upload/part-urls, GET /videos/:publicId/upload/parts, DELETE /videos/:publicId/upload
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-upload-parts.plan.md`
 **Authorization:** Owner
 
 **Description:** Entrega as URLs pré-assinadas por parte (reemissíveis a qualquer momento, o que permite retomar o upload), lista as partes já armazenadas e permite abortar o rascunho, tudo sem que um byte do arquivo passe pela API.
@@ -193,7 +193,7 @@ Deliver video upload of files up to 10GB directly to object storage without impa
 ### SI-03.6 — Endpoint de conclusão do upload e publicação do job de processamento
 
 **Route:** POST /videos/:publicId/upload/complete
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-upload-complete.plan.md`
 **Authorization:** Owner
 
 **Description:** Finaliza o multipart no storage, confere o tamanho real do objeto, move o vídeo para `'processing'` e publica o job `process-video` na fila — o gatilho do processamento automático.
@@ -297,7 +297,7 @@ Deliver video upload of files up to 10GB directly to object storage without impa
 ### SI-03.9 — Endpoint GET /videos/:publicId (consulta do vídeo e do status)
 
 **Route:** GET /videos/:publicId
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-get.plan.md`
 **Authorization:** Owner
 
 **Description:** Expõe ao dono o vídeo e o status do processamento, para acompanhar o ciclo `draft → processing → ready | failed` com duração, metadados e motivo de falha.
@@ -328,7 +328,7 @@ Deliver video upload of files up to 10GB directly to object storage without impa
 ### SI-03.10 — Endpoints de streaming, download e thumbnail via redirect pré-assinado
 
 **Route:** GET /videos/:publicId/stream, GET /videos/:publicId/download, GET /videos/:publicId/thumbnail
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-playback.plan.md`
 **Authorization:** Owner
 
 **Description:** Autoriza o dono e redireciona (`302`) para URLs pré-assinadas de curta duração; o storage atende `Range` com `206 Partial Content`, então a reprodução começa sem baixar o arquivo inteiro e os bytes nunca passam pela API.
