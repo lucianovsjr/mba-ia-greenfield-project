@@ -9,9 +9,15 @@ import videosConfig from '../config/videos.config';
 import { StorageService } from '../storage/storage.service';
 import type { InitiateUploadResponse } from './dto/initiate-upload-response.dto';
 import type { InitiateUploadDto } from './dto/initiate-upload.dto';
+import type { PartUrlsResponse } from './dto/part-urls-response.dto';
+import type { RequestPartUrlsDto } from './dto/request-part-urls.dto';
+import type { UploadedPartsResponse } from './dto/uploaded-parts-response.dto';
 import { Video } from './entities/video.entity';
 import {
+  InvalidUploadPartsException,
+  InvalidUploadStateException,
   UnsupportedVideoFormatException,
+  VideoNotFoundException,
   VideoTooLargeException,
 } from './exceptions/video.exceptions';
 import { generatePublicId } from './public-id.util';
@@ -83,10 +89,88 @@ export class VideosService {
       video: toVideoResponse(video),
       upload: {
         part_size_bytes: this.config.uploadPartSizeBytes,
-        part_count: Math.ceil(dto.size / this.config.uploadPartSizeBytes),
+        part_count: this.partCount(dto.size),
         max_part_urls_per_request: MAX_PART_URLS_PER_REQUEST,
       },
     };
+  }
+
+  async requestPartUrls(
+    userId: string,
+    publicId: string,
+    dto: RequestPartUrlsDto,
+  ): Promise<PartUrlsResponse> {
+    const video = this.assertDraft(await this.findOwnedVideo(userId, publicId));
+    const partCount = this.partCount(video.size_bytes);
+    if (dto.part_numbers.some((partNumber) => partNumber > partCount)) {
+      throw new InvalidUploadPartsException();
+    }
+
+    const ttl = this.config.uploadPartUrlTtlSeconds;
+    const expiresAt = new Date(Date.now() + ttl * 1000);
+    const urls = await Promise.all(
+      dto.part_numbers.map(async (partNumber) => ({
+        part_number: partNumber,
+        url: await this.storageService.presignUploadPart(
+          video.source_key,
+          video.upload_id!,
+          partNumber,
+          ttl,
+        ),
+      })),
+    );
+    return { urls, expires_at: expiresAt.toISOString() };
+  }
+
+  async listUploadedParts(
+    userId: string,
+    publicId: string,
+  ): Promise<UploadedPartsResponse> {
+    const video = this.assertDraft(await this.findOwnedVideo(userId, publicId));
+    const parts = await this.storageService.listParts(
+      video.source_key,
+      video.upload_id!,
+    );
+    return {
+      parts: parts.map((part) => ({
+        part_number: part.partNumber,
+        etag: part.etag,
+        size_bytes: part.sizeBytes,
+      })),
+    };
+  }
+
+  async abortUpload(userId: string, publicId: string): Promise<void> {
+    const video = this.assertDraft(await this.findOwnedVideo(userId, publicId));
+    await this.storageService.abortMultipartUpload(
+      video.source_key,
+      video.upload_id!,
+    );
+    await this.dataSource.getRepository(Video).delete({ id: video.id });
+  }
+
+  // A video that does not exist or belongs to another user's channel is
+  // reported the same way, so its existence is not revealed.
+  async findOwnedVideo(userId: string, publicId: string): Promise<Video> {
+    const video = await this.dataSource.getRepository(Video).findOne({
+      where: { public_id: publicId },
+      relations: ['channel'],
+    });
+    if (!video || video.channel.user_id !== userId) {
+      throw new VideoNotFoundException();
+    }
+    return video;
+  }
+
+  assertDraft(video: Video): Video {
+    if (video.status !== 'draft' || !video.upload_id) {
+      throw new InvalidUploadStateException();
+    }
+    return video;
+  }
+
+  private partCount(sizeBytes: number): number {
+    return Math.ceil(sizeBytes / this.config.uploadPartSizeBytes);
   }
 
   private assertSupportedFormat(filename: string, contentType: string): void {

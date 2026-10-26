@@ -39,7 +39,14 @@ describe('VideosService (integration)', () => {
         TypeOrmModule.forRoot(createTestDataSource(ALL_ENTITIES).options),
         VideosModule,
       ],
-    }).compile();
+    })
+      // Presigned URLs must be reachable from inside the container.
+      .overrideProvider(storageConfig.KEY)
+      .useValue({
+        ...storageConfig(),
+        publicEndpoint: storageConfig().endpoint,
+      })
+      .compile();
 
     dataSource = moduleRef.get(DataSource);
     videosService = moduleRef.get(VideosService);
@@ -108,5 +115,48 @@ describe('VideosService (integration)', () => {
     for (const row of await videoRepository.find()) {
       await storage.abortMultipartUpload(row.source_key, row.upload_id!);
     }
+  });
+
+  it('should list a part uploaded through an issued presigned URL', async () => {
+    const { video } = await initiate();
+    const { urls } = await videosService.requestPartUrls(
+      userId,
+      video.public_id,
+      { part_numbers: [1] },
+    );
+    const put = await fetch(urls[0].url, {
+      method: 'PUT',
+      body: new Uint8Array(1024),
+    });
+    expect(put.status).toBe(200);
+
+    const { parts } = await videosService.listUploadedParts(
+      userId,
+      video.public_id,
+    );
+
+    expect(parts).toEqual([
+      { part_number: 1, etag: put.headers.get('etag'), size_bytes: 1024 },
+    ]);
+    const row = await videoRepository.findOneByOrFail({
+      public_id: video.public_id,
+    });
+    await storage.abortMultipartUpload(row.source_key, row.upload_id!);
+  });
+
+  it('should abort the multipart upload and delete the draft', async () => {
+    const { video } = await initiate();
+    const row = await videoRepository.findOneByOrFail({
+      public_id: video.public_id,
+    });
+
+    await videosService.abortUpload(userId, video.public_id);
+
+    expect(
+      await videoRepository.findOneBy({ public_id: video.public_id }),
+    ).toBeNull();
+    await expect(
+      storage.listParts(row.source_key, row.upload_id!),
+    ).rejects.toMatchObject({ name: 'NoSuchUpload' });
   });
 });

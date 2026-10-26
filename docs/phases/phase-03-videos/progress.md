@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 4/12 completed
+**SIs:** 5/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
@@ -40,9 +40,12 @@
   - 1 tentativa de correção: lint apontou import não usado e variável descartada no e2e; ajustados.
 
 ### SI-03.5 — Endpoints de partes do upload: URLs pré-assinadas, listagem para retomada e abort
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** 27 unit/integration passing (`videos.service.spec.ts` + `videos.service.integration-spec.ts`) + 6 e2e passing (`test/videos-upload-parts.e2e-spec.ts`, da spec); regressão `test/videos-initiate-upload.e2e-spec.ts` 6 passing; `tsc --noEmit` exit 0; eslint limpo
+- **Observations:**
+  - `findOwnedVideo` carrega a relação `channel` e compara `channel.user_id` com o `sub` do JWT; vídeo inexistente e vídeo de outro canal retornam o mesmo `VIDEO_NOT_FOUND` (TD-17).
+  - `assertDraft` também rejeita rascunho sem `upload_id`, garantindo que as operações de multipart nunca recebam um `UploadId` nulo.
+  - Integração e e2e sobrescrevem `storageConfig` com `publicEndpoint = S3_ENDPOINT` (via `createE2eApp(customize)` no e2e), conforme o Setup da spec.
 
 ### SI-03.6 — Endpoint de conclusão do upload e publicação do job de processamento
 - **Status:** pending
