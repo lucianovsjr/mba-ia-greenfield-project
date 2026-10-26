@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 2/12 completed
+**SIs:** 3/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
@@ -21,9 +21,13 @@
   - `listParts` pagina via `PartNumberMarker` (`IsTruncated`), cobrindo uploads com mais de 1000 partes.
 
 ### SI-03.3 — Entidade Video, migration e VideosModule
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** 73 passing em 13 suítes (`video.entity.integration-spec.ts`, `videos.module.spec.ts`, `migrations.integration-spec.ts` + 10 suítes da Fase 02 afetadas pela nova relação); `tsc --noEmit` exit 0; lint 0 erros (23 warnings pré-existentes)
+- **Observations:**
+  - Migration gerada pela CLI: `src/database/migrations/1792977734660-CreateVideos.ts` (enum `videos_status_enum`, unique em `public_id`, índice em `channel_id`, FK com `ON DELETE CASCADE`); `migration:run` → `migration:revert` → `migration:run` validados no banco de dev.
+  - A relação `Channel → videos` obriga todo `DataSource` de teste com `Channel` a carregar `Video`: além dos dois arquivos citados no plano, `Video` foi acrescentado aos arrays `ALL_ENTITIES` de 10 testes da Fase 02 (auth, users, channels) e `cleanAllTables` passou a limpar `videos` primeiro (FK).
+  - O teste de migrations agora cobre 3 migrations; o teste de reversão verifica a remoção da tabela `videos` e do enum.
+  - Os 10 arrays `ALL_ENTITIES` duplicados poderiam virar uma constante compartilhada em `src/test/` — refatoração fora do escopo deste SI (task separada).
 
 ### SI-03.4 — Endpoint POST /videos (pré-cadastro do rascunho e início do upload)
 - **Status:** pending
