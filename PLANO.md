@@ -135,8 +135,8 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
   - Divergência: o testing guide (`references/external-systems.md`) ainda sugere storage em filesystem local nos testes; as specs seguem a TD-02/TD-03 e o DESAFIO (MinIO real). Atualizar o testing guide é task separada.
 
 ### T2.6 — Fechar o planejamento
-- [ ] Revisar a coerência entre decisões ↔ context ↔ validation ↔ plano (nada no plano sem origem rastreável).
-- [ ] Merge de `docs/phase-03-planning` na `dev` (commit somente com autorização).
+- [x] Revisar a coerência entre decisões ↔ context ↔ validation ↔ plano (nada no plano sem origem rastreável). → checagem automática: as 22 refs de TD do plano existem no `context.md`; as 17 TDs da fase são citadas; os 8 códigos de erro dos SIs e das specs constam no Error Catalog; as 9 rotas dos SIs têm contrato no API Contracts; as 4 libs constam no `library-refs.md`; nenhum `sources_mtime` defasado; `validation.md` `clean` e decisões `decided`.
+- [x] Merge de `docs/phase-03-planning` na `dev` (commit somente com autorização).
 
 ---
 
