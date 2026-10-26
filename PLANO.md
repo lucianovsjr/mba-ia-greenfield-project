@@ -131,7 +131,8 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
   - [x] Testes nos três níveis. → unit/integration por SI; e2e dos controllers via `/plan-test-specs` + pipeline e2e no SI-03.11.
   - [x] Documentação OpenAPI dos novos endpoints. → decorators nos SIs de controller + `openapi.json` no SI-03.11.
   - [x] SI final para atualizar o `CLAUDE.md`. → SI-03.12.
-- [ ] `/plan-test-specs 03` — **necessário** (não opcional): o plano tem 5 SIs de controller com `**Test Specs:** _pending /plan-test-specs_` (SI-03.4, .5, .6, .9, .10), e o `/implement` aborta sem as specs.
+- [x] `/plan-test-specs 03` — **necessário** (não opcional): o plano tinha 5 SIs de controller com `**Test Specs:** _pending /plan-test-specs_` (SI-03.4, .5, .6, .9, .10). → 5 specs geradas em `nestjs-project/specs/` (`videos-initiate-upload`, `videos-upload-parts`, `videos-upload-complete`, `videos-get`, `videos-playback`), placeholders preenchidos no plano.
+  - Divergência: o testing guide (`references/external-systems.md`) ainda sugere storage em filesystem local nos testes; as specs seguem a TD-02/TD-03 e o DESAFIO (MinIO real). Atualizar o testing guide é task separada.
 
 ### T2.6 — Fechar o planejamento
 - [ ] Revisar a coerência entre decisões ↔ context ↔ validation ↔ plano (nada no plano sem origem rastreável).
