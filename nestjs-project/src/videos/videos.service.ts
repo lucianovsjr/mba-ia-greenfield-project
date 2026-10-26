@@ -212,6 +212,10 @@ export class VideosService {
 
   // The multipart upload is already completed, so the draft cannot receive
   // more parts: drop the object and the draft; the client starts over.
+  async getVideo(userId: string, publicId: string): Promise<VideoResponse> {
+    return toVideoResponse(await this.findOwnedVideo(userId, publicId));
+  }
+
   private async discardUpload(video: Video): Promise<void> {
     await this.storageService.deleteObject(video.source_key);
     await this.dataSource.getRepository(Video).delete({ id: video.id });

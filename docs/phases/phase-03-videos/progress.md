@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 8/12 completed
+**SIs:** 9/12 completed
 
 ### SI-03.1 — Infra: dependências, namespaces de configuração e serviços no Docker Compose
 - **Status:** completed
@@ -81,9 +81,10 @@
   - 2 tentativas de correção: (1) unit — o mock do `extractFrame` não gravava o JPEG; o cenário passou a cobrir a falha do ffmpeg; (2) e2e — o caminho do `setup-env.ts` no `jest-e2e.json` é relativo a `test/` (`<rootDir>/../src/...`).
 
 ### SI-03.9 — Endpoint GET /videos/:publicId (consulta do vídeo e do status)
-- **Status:** pending
-- **Tests:** —
-- **Observations:** none
+- **Status:** completed
+- **Tests:** 37 unit passing (`videos.service.spec.ts`, 5 novos em `getVideo`) + 5 e2e passing (`test/videos-get.e2e-spec.ts`, da spec); regressão `test/videos-initiate-upload.e2e-spec.ts` 6 passing; `tsc --noEmit` exit 0; eslint limpo
+- **Observations:**
+  - O e2e aborta no MinIO os multipart uploads dos rascunhos antes de apagar as linhas, a cada teste, e não só no `afterAll` como em `videos-upload-parts.e2e-spec.ts`. Assim não acumulam uploads abertos no bucket.
 
 ### SI-03.10 — Endpoints de streaming, download e thumbnail via redirect pré-assinado
 - **Status:** pending

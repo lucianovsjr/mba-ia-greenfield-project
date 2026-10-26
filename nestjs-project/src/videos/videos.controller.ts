@@ -91,6 +91,27 @@ export class VideosController {
     return this.videosService.initiateUpload(user.sub, dto);
   }
 
+  @Get(':publicId')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Get a video',
+    description:
+      "Returns the caller's video with its processing status (draft → processing → ready | failed), including duration, metadata and failure reason once available.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The video and its current status',
+    type: VideoResponse,
+  })
+  @ApiResponse(UNAUTHORIZED_RESPONSE)
+  @ApiResponse(NOT_FOUND_RESPONSE)
+  async getVideo(
+    @CurrentUser() user: JwtPayload,
+    @Param('publicId') publicId: string,
+  ): Promise<VideoResponse> {
+    return this.videosService.getVideo(user.sub, publicId);
+  }
+
   @Post(':publicId/upload/part-urls')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('access-token')

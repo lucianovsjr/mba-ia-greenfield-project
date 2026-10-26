@@ -246,6 +246,109 @@ describe('VideosService', () => {
     });
   });
 
+  describe('getVideo', () => {
+    const storedVideo = (overrides: Record<string, unknown> = {}) =>
+      draftVideo({
+        channel_id: 'channel-1',
+        title: 'My video',
+        original_filename: 'clip.mp4',
+        content_type: 'video/mp4',
+        thumbnail_key: null,
+        duration_seconds: null,
+        metadata: null,
+        failure_reason: null,
+        created_at: new Date('2026-10-25T00:00:00Z'),
+        updated_at: new Date('2026-10-25T00:05:00Z'),
+        ...overrides,
+      });
+
+    it('should map a draft with null processing fields and no thumbnail', async () => {
+      repository.findOne.mockResolvedValue(storedVideo());
+
+      const response = await service.getVideo('user-1', 'AAAAAAAAAAA');
+
+      expect(response).toMatchObject({
+        public_id: 'AAAAAAAAAAA',
+        status: 'draft',
+        duration_seconds: null,
+        metadata: null,
+        has_thumbnail: false,
+        failure_reason: null,
+        created_at: '2026-10-25T00:00:00.000Z',
+        updated_at: '2026-10-25T00:05:00.000Z',
+      });
+    });
+
+    it('should expose duration, metadata and has_thumbnail for a ready video', async () => {
+      const metadata = {
+        formatName: 'mov,mp4,m4a,3gp,3g2,mj2',
+        bitRate: 1200000,
+        width: 640,
+        height: 360,
+        frameRate: 30,
+        videoCodec: 'h264',
+        audioCodec: 'aac',
+      };
+      repository.findOne.mockResolvedValue(
+        storedVideo({
+          status: 'ready',
+          upload_id: null,
+          duration_seconds: 3,
+          metadata,
+          thumbnail_key: 'videos/video-1/thumbnail.jpg',
+        }),
+      );
+
+      const response = await service.getVideo('user-1', 'AAAAAAAAAAA');
+
+      expect(response).toMatchObject({
+        status: 'ready',
+        duration_seconds: 3,
+        metadata,
+        has_thumbnail: true,
+      });
+    });
+
+    it('should expose the failure reason of a failed video', async () => {
+      repository.findOne.mockResolvedValue(
+        storedVideo({ status: 'failed', failure_reason: 'INVALID_MEDIA' }),
+      );
+
+      const response = await service.getVideo('user-1', 'AAAAAAAAAAA');
+
+      expect(response.status).toBe('failed');
+      expect(response.failure_reason).toBe('INVALID_MEDIA');
+      expect(response.has_thumbnail).toBe(false);
+    });
+
+    it('should never leak internal identifiers or storage keys', async () => {
+      repository.findOne.mockResolvedValue(
+        storedVideo({ thumbnail_key: 'videos/video-1/thumbnail.jpg' }),
+      );
+
+      const response = await service.getVideo('user-1', 'AAAAAAAAAAA');
+
+      for (const key of [
+        'id',
+        'channel_id',
+        'channel',
+        'upload_id',
+        'source_key',
+        'thumbnail_key',
+      ]) {
+        expect(response).not.toHaveProperty(key);
+      }
+    });
+
+    it("should throw VideoNotFoundException for another user's video", async () => {
+      repository.findOne.mockResolvedValue(storedVideo());
+
+      await expect(
+        service.getVideo('user-2', 'AAAAAAAAAAA'),
+      ).rejects.toBeInstanceOf(VideoNotFoundException);
+    });
+  });
+
   describe('assertDraft', () => {
     it.each(['processing', 'ready', 'failed'])(
       'should reject a video in %s status',
