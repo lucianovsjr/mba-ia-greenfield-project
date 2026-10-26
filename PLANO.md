@@ -18,7 +18,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - [ ] Criar as branches de trabalho a partir da `dev` (cada uma só depois do merge da anterior):
   - `bugfix/baseline-lint-and-tests` — correção dos problemas pré-existentes (T0.4).
   - `feature/mcp-context7` — configuração do MCP context7 (T0.5).
-  - `docs/phase-03-planning` — research + artefatos de planejamento (Etapas 1–2).
+  - `docs/phase-03-planning` — research + artefatos de planejamento (Etapas 1–2). ✅ criada a partir da `dev`.
   - `feature/phase-03-videos` — implementação (Etapa 3), criada da `dev` após o merge do planejamento.
 - **Pronto quando:** nenhuma alteração for feita diretamente na `main`; o trabalho acontece em branches `docs/*` / `bugfix/*` / `feature/*` saídas da `dev`.
 
@@ -42,8 +42,8 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 ### T0.3 — Verificar a fundação de IA
 - [x] MCP Postgres conectado e consultando o banco do Compose.
 - [x] MCP context7 conectado (configurado na T0.5).
-- [ ] Ler como referência de formato: `docs/phases/phase-02-auth/` (context, validation, plano, progress) e `docs/decisions/technical-decisions-phase-02-auth.md`.
-- [ ] Ler as rules relevantes em `.claude/rules/` (layer separation, modules, services, controllers, DTOs, entities, typeorm-migrations, typeorm-queries, testing, typescript-strict).
+- [x] Ler como referência de formato: `docs/phases/phase-02-auth/` (context, validation, plano, progress) e `docs/decisions/technical-decisions-phase-02-auth.md`.
+- [x] Ler as rules relevantes em `.claude/rules/` (layer separation, modules, services, controllers, DTOs, entities, typeorm-migrations, typeorm-queries, testing, typescript-strict).
 - **Pronto quando:** context7 responde a uma consulta e o MCP Postgres consegue consultar o banco do Compose.
 
 ### T0.4 — Corrigir problemas pré-existentes do baseline (`bugfix/baseline-lint-and-tests`)
@@ -60,7 +60,7 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 - [x] Documentar a variável opcional `CONTEXT7_API_KEY` no `CLAUDE.md` (seção "Library Documentation Lookup").
 - [x] Habilitar o servidor no Claude Code (`enabledMcpjsonServers` no `.claude/settings.local.json`, local) — `claude mcp list` mostra `context7 ✔ Connected`.
 - [x] Validar com uma consulta real de documentação (`resolve-library-id` respondeu via HTTP).
-- [ ] Reiniciar a sessão do Claude Code para carregar as ferramentas do context7 e confirmar uma consulta pela própria sessão.
+- [x] Reiniciar a sessão do Claude Code para carregar as ferramentas do context7 e confirmar uma consulta pela própria sessão (`resolve-library-id` + `query-docs` sobre `ConfigModule`/`registerAs` do NestJS responderam).
 - [x] Merge na `dev`.
 - **Pronto quando:** `claude mcp list` mostra o context7 conectado e uma consulta retorna documentação.
 
@@ -69,17 +69,22 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 ## Etapa 1 — Research (decisões técnicas)
 
 ### T1.1 — Rodar `/research` da Fase 03
-- [ ] Executar `/research phase 03` (phase mode — escopo = bullets da Fase 03 em `docs/project-plan.md`).
-- [ ] Garantir que o documento cubra, no mínimo, as decisões exigidas pelo desafio, cada uma com opções, trade-offs, recomendação e o campo `Capability:` apontando para o bullet da fase:
-  - [ ] **Tecnologia de fila** (decisão principal — o plano a deixa "TBD"). Candidatas a avaliar: BullMQ + Redis, RabbitMQ, fila em PostgreSQL (ex.: pg-boss), SQS/ElasticMQ.
-  - [ ] **Estratégia de upload de até 10GB sem travar a API** (ex.: URL pré-assinada / multipart upload direto ao S3/MinIO, confirmação de conclusão do upload, expiração e limpeza de uploads abandonados).
-  - [ ] **Uso do object storage** (MinIO local / S3 em produção — já dado): buckets, convenção de chaves de vídeo e thumbnail, cliente/SDK.
-  - [ ] **Execução do worker** (processo/container separado; mesmo código-base ou projeto separado) e uso de **FFmpeg/ffprobe** para metadados e thumbnail (escolha do frame, formato da imagem).
-  - [ ] **Gatilho do processamento** (quem publica o job e quando: confirmação do cliente vs. evento do storage).
-  - [ ] **URL única** (formato do identificador público, garantia de unicidade/colisão).
-  - [ ] **Streaming** (HTTP Range / `206 Partial Content` — proxy pela API vs. redirecionamento para URL pré-assinada) e **download** (ex.: `Content-Disposition`).
-  - [ ] **Ciclo de status** (rascunho → processando → pronto/erro), retries, idempotência do job e comportamento em falha.
-  - [ ] **Autorização** (quem pode iniciar upload, quem pode assistir/baixar — anônimo vs. dono, considerando o status).
+- [x] Executar `/research phase 03` (phase mode — escopo = bullets da Fase 03 em `docs/project-plan.md`). → 17 TDs geradas, todas com `**Decision:** _[pending]_`.
+- [x] Garantir que o documento cubra, no mínimo, as decisões exigidas pelo desafio, cada uma com opções, trade-offs, recomendação e o campo `Capability:` apontando para o bullet da fase:
+  - [x] **Tecnologia de fila** → TD-01 (BullMQ + Redis, pg-boss, RabbitMQ, SQS/ElasticMQ).
+  - [x] **Estratégia de upload de até 10GB sem travar a API** → TD-05 (protocolo), TD-16 (limites, expiração, uploads abandonados).
+  - [x] **Uso do object storage** → TD-02 (imagem do servidor local), TD-03 (SDK + endpoint interno/público), TD-04 (buckets e chaves).
+  - [x] **Execução do worker** e **FFmpeg/ffprobe** → TD-07 (runtime), TD-08 (integração FFmpeg), TD-09 (acesso ao arquivo de origem), TD-10 (frame e formato do thumbnail), TD-11 (persistência dos metadados).
+  - [x] **Gatilho do processamento** → TD-06.
+  - [x] **URL única** → TD-12.
+  - [x] **Streaming** e **download** → TD-13.
+  - [x] **Ciclo de status**, retries, idempotência e falha → TD-14, TD-15.
+  - [x] **Autorização** → TD-17.
+- [x] Revisar as 17 TDs e preencher o campo `**Decision:**` de cada uma (decisão minha). → todas seguiram a recomendação; documento com `status: decided`.
+- Achados do research que fogem do esperado (registrados nas "Research notes" do documento):
+  - As imagens oficiais da MinIO (`minio/minio`, `quay.io/minio/minio`, `minio/mc`) não podem mais ser baixadas → virou a TD-02.
+  - `@nestjs/storage` (doc atual do NestJS no context7) exige NestJS 12.1 → incompatível com o NestJS 11.1.16 instalado.
+  - `fluent-ffmpeg` está deprecated; `pg-boss@12`, `@nestjs/bullmq@12` e `nanoid@6` são ESM-only (risco com Jest/ts-jest em CommonJS).
 - **Artefato:** `docs/decisions/technical-decisions-phase-03-videos.md` (frontmatter `scope_type: phase`, `related_phases: [3]`).
 - **Pronto quando:** todas as TDs estiverem com status decidido, revisadas criticamente por mim, sem requisito inventado fora do escopo da Fase 03.
 
@@ -93,43 +98,45 @@ Plano de execução do desafio descrito em [DESAFIO.md](DESAFIO.md). Cada task t
 ## Etapa 2 — Planejamento (pipeline)
 
 ### T2.1 — `/plan-context 03`
-- [ ] Gerar `docs/phases/phase-03-videos/context.md` (consolida project-plan, decisões, convenções das fases anteriores e testing guide).
-- [ ] Revisar: capability coverage completo (todos os bullets da Fase 03 mapeados), convenções herdadas da Fase 02 presentes.
+- [x] Gerar `docs/phases/phase-03-videos/context.md` (consolida project-plan, decisões, convenções das fases anteriores e testing guide).
+- [x] Revisar: capability coverage completo (todos os bullets da Fase 03 mapeados), convenções herdadas da Fase 02 presentes. → 9/9 capabilities cobertas; docs ad-hoc herdados: `openapi-docs-nestjs`, `next-frontend-config-base`, `next-frontend-msw-foundation`.
 
 ### T2.2 — `/plan-validate 03`
-- [ ] Gerar `docs/phases/phase-03-videos/validation.md`.
-- [ ] Ler as issues por categoria (inconsistências, decisões faltando, gaps de dependência).
+- [x] Gerar `docs/phases/phase-03-videos/validation.md`. → 1ª rodada: `status: dirty`, 3 issues (AMB-1 payload do pré-cadastro, AMB-2 formatos aceitos, AMB-3 subprojetos afetados).
+- [x] Ler as issues por categoria (inconsistências, decisões faltando, gaps de dependência).
 
 ### T2.3 — `/plan-resolve 03`
-- [ ] Responder às pendências levantadas; atualizar decisões e `context.md`.
-- [ ] Fixar as libs novas via **context7** (versões compatíveis com NestJS 11 / Node do projeto) → `docs/phases/phase-03-videos/library-refs.md`. Esperado: SDK S3, lib da fila escolhida, wrapper/binário FFmpeg (conforme decidido).
-- [ ] Sinalizar qualquer divergência entre a doc retornada e a versão instalada.
+- [x] Responder às pendências levantadas; atualizar decisões e `context.md`. → AMB-1 e AMB-2 viraram Revisions da TD-16 (`title` obrigatório no initiate; allowlist `.mp4`/`.mov`/`.mpg`/`.mpeg`/`.avi` + ffprobe); AMB-3 esclarecida (só `nestjs-project/`, frontend registrado como deferred).
+- [x] Fixar as libs novas via **context7** (versões compatíveis com NestJS 11 / Node do projeto) → `docs/phases/phase-03-videos/library-refs.md`. Fixadas: `bullmq@^5.81.5`, `@nestjs/bullmq@^11.0.5`, `@aws-sdk/client-s3@^3.1156.0`, `@aws-sdk/s3-request-presigner@^3.1156.0`. FFmpeg é binário do SO (sem lib npm).
+- [x] Sinalizar qualquer divergência entre a doc retornada e a versão instalada. → a doc do BullMQ no context7 é da era v6; as APIs usadas existem iguais na 5.x (registrado no `library-refs.md`).
+- Task separada (fora de escopo, não feita): o regex `S_NN` em `.claude/agents/decisions-reader.md` usa lookahead, que o ripgrep não suporta sem PCRE2. O subagente contornou com um padrão equivalente; corrigir a spec do agente numa branch própria.
 
 ### T2.4 — Iterar validate ⇄ resolve até `clean`
-- [ ] Repetir T2.2 → T2.3 até `validation.md` terminar com **`status: clean`**.
+- [x] Repetir T2.2 → T2.3 até `validation.md` terminar com **`status: clean`**. → 2ª rodada do validate: `status: clean`, nenhuma issue nova (AMB-1..3 resolvidas).
 - **Pronto quando:** veredito `clean`, sem issue aberta.
 
 ### T2.5 — `/plan-build 03`
-- [ ] Gerar `docs/phases/phase-03-videos/phase-03-videos.md` com:
-  - [ ] Step Implementations `SI-03.1`, `SI-03.2`, … (cada uma com arquivos, ações técnicas e seção de Tests).
-  - [ ] Technical Specifications: **Data Model**, **API Contracts**, **Authorization Matrix**, **Error Catalog**, **Events/Messages** (payload do job, produtor, consumidor, retries).
-  - [ ] **Dependency Map** e **Deliverables**.
-- [ ] Revisão crítica do plano — checklist mínimo de cobertura:
-  - [ ] Infra no `compose.yaml`: storage (MinIO + criação de bucket), fila, worker — usando nomes de serviço como host.
-  - [ ] Namespaces de configuração/env para storage, fila e worker.
-  - [ ] Entidade `Video` ligada a `Channel` + migration `<timestamp>-CreateVideos.ts` (id, canal, título, status, chaves de storage do vídeo e thumbnail, duração, metadados, identificador da URL única).
-  - [ ] Início do upload com pré-cadastro como rascunho.
-  - [ ] Conclusão do upload → publicação do job na fila.
-  - [ ] Worker: consumo do job, ffprobe (duração/metadados), FFmpeg (thumbnail), upload do thumbnail, transição de status, tratamento de falha.
-  - [ ] Consulta do vídeo/status, streaming (Range/206) e download.
-  - [ ] Testes nos três níveis (`*.spec.ts`, `*.integration-spec.ts` contra MinIO/fila/Postgres reais, `*.e2e-spec.ts`).
-  - [ ] Documentação OpenAPI dos novos endpoints (padrão do módulo `swagger/`).
-  - [ ] SI final para atualizar o `CLAUDE.md`.
-- [ ] *(Opcional)* `/plan-test-specs 03` se o plano tiver SIs com `**Test Specs:**`.
+- [x] Gerar `docs/phases/phase-03-videos/phase-03-videos.md` com:
+  - [x] Step Implementations `SI-03.1` … `SI-03.12` (cada uma com arquivos, ações técnicas e seção de Tests).
+  - [x] Technical Specifications: **Data Model**, **API Contracts**, **Authorization Matrix**, **Error Catalog**, **Events/Messages** (payload do job, produtor, consumidor, retries).
+  - [x] **Dependency Map** e **Deliverables**.
+- [ ] Revisão crítica do plano (minha) — checklist mínimo de cobertura (pré-conferido pelo agente, falta a revisão humana):
+  - [x] Infra no `compose.yaml`: storage (MinIO + criação de bucket), fila, worker — usando nomes de serviço como host. → SI-03.1 (`minio`, `minio-init`, `redis`) e SI-03.8 (`video-worker`).
+  - [x] Namespaces de configuração/env para storage, fila e worker. → SI-03.1 (`storage`, `queue`, `videos`).
+  - [x] Entidade `Video` ligada a `Channel` + migration `<timestamp>-CreateVideos.ts`. → SI-03.3.
+  - [x] Início do upload com pré-cadastro como rascunho. → SI-03.4.
+  - [x] Conclusão do upload → publicação do job na fila. → SI-03.6.
+  - [x] Worker: consumo do job, ffprobe, FFmpeg, upload do thumbnail, transição de status, tratamento de falha. → SI-03.7 e SI-03.8.
+  - [x] Consulta do vídeo/status, streaming (Range/206) e download. → SI-03.9 e SI-03.10.
+  - [x] Testes nos três níveis. → unit/integration por SI; e2e dos controllers via `/plan-test-specs` + pipeline e2e no SI-03.11.
+  - [x] Documentação OpenAPI dos novos endpoints. → decorators nos SIs de controller + `openapi.json` no SI-03.11.
+  - [x] SI final para atualizar o `CLAUDE.md`. → SI-03.12.
+- [x] `/plan-test-specs 03` — **necessário** (não opcional): o plano tinha 5 SIs de controller com `**Test Specs:** _pending /plan-test-specs_` (SI-03.4, .5, .6, .9, .10). → 5 specs geradas em `nestjs-project/specs/` (`videos-initiate-upload`, `videos-upload-parts`, `videos-upload-complete`, `videos-get`, `videos-playback`), placeholders preenchidos no plano.
+  - Divergência: o testing guide (`references/external-systems.md`) ainda sugere storage em filesystem local nos testes; as specs seguem a TD-02/TD-03 e o DESAFIO (MinIO real). Atualizar o testing guide é task separada.
 
 ### T2.6 — Fechar o planejamento
-- [ ] Revisar a coerência entre decisões ↔ context ↔ validation ↔ plano (nada no plano sem origem rastreável).
-- [ ] Merge de `docs/phase-03-planning` na `dev` (commit somente com autorização).
+- [x] Revisar a coerência entre decisões ↔ context ↔ validation ↔ plano (nada no plano sem origem rastreável). → checagem automática: as 22 refs de TD do plano existem no `context.md`; as 17 TDs da fase são citadas; os 8 códigos de erro dos SIs e das specs constam no Error Catalog; as 9 rotas dos SIs têm contrato no API Contracts; as 4 libs constam no `library-refs.md`; nenhum `sources_mtime` defasado; `validation.md` `clean` e decisões `decided`.
+- [x] Merge de `docs/phase-03-planning` na `dev` (commit somente com autorização).
 
 ---
 
